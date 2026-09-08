@@ -99,10 +99,10 @@ class CourseListView(APIView):
         if user.role == User.Role.INSTRUCTOR:
             courses = Course.objects.filter(instructor=user)
         elif user.role == User.Role.STUDENT:
-            if user.academic_level:
-                courses = Course.objects.filter(academic_levels__contains=[user.academic_level])
-            else:
-                courses = Course.objects.none()
+            courses = [
+                course for course in Course.objects.all()
+                if user.academic_level and user.academic_level in course.level_values
+            ]
         else:
             courses = Course.objects.all()
 
