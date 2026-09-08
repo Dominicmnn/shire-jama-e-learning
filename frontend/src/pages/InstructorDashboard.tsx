@@ -103,8 +103,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const handleMaterialUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourseForUpload || !materialTitle.trim() || !selectedFile || !selectedChapterId) return;
-    if (selectedFile.size > 2 * 1024 * 1024 * 1024) {
-      setUploadError('This file is larger than the configured 2 GB upload limit.');
+    if (selectedFile.size > 100 * 1024 * 1024) {
+      setUploadError('This file is larger than the configured 100 MB upload limit.');
       return;
     }
 
