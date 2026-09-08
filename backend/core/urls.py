@@ -1,0 +1,55 @@
+from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
+from .views import (
+    CustomTokenObtainPairView,
+    StudentRegisterView,
+    CurrentUserProfileView,
+    CourseListView,
+    CourseDetailView,
+    MaterialUploadView,
+    ChapterCreateView,
+    ChapterProgressView,
+    MaterialStreamView,
+    QuizCreateView,
+    QuizSubmitView,
+    QuizResultsOverviewView,
+    AdminInstructorManagementView,
+    AdminToggleInstructorStatusView,
+        AdminUserUpdateView,
+    AdminResetPasswordView,
+)
+
+urlpatterns = [
+    # ------------------------------------------------
+    # Authentication & Profile
+    # ------------------------------------------------
+    path('auth/login/', CustomTokenObtainPairView.as_view(), name='auth_login'),
+    path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/register/student/', StudentRegisterView.as_view(), name='student_register'),
+    path('auth/me/', CurrentUserProfileView.as_view(), name='current_user_profile'),
+
+    # ------------------------------------------------
+    # Courses & Learning Materials
+    # ------------------------------------------------
+    path('courses/', CourseListView.as_view(), name='course_list'),
+    path('courses/<int:course_id>/', CourseDetailView.as_view(), name='course_detail'),
+    path('courses/<int:course_id>/materials/', MaterialUploadView.as_view(), name='material_upload'),
+    path('courses/<int:course_id>/chapters/', ChapterCreateView.as_view(), name='chapter_create'),
+    path('courses/<int:course_id>/progress/', ChapterProgressView.as_view(), name='chapter_progress'),
+    path('materials/<int:material_id>/stream/', MaterialStreamView.as_view(), name='material_stream'),
+
+    # ------------------------------------------------
+    # Quizzes & Assessments
+    # ------------------------------------------------
+    path('courses/<int:course_id>/quizzes/', QuizCreateView.as_view(), name='quiz_create'),
+    path('quizzes/<int:quiz_id>/submit/', QuizSubmitView.as_view(), name='quiz_submit'),
+    path('quiz-results/', QuizResultsOverviewView.as_view(), name='quiz_results_overview'),
+
+    # ------------------------------------------------
+    # Institutional Admin Management
+    # ------------------------------------------------
+    path('admin/instructors/', AdminInstructorManagementView.as_view(), name='admin_instructors'),
+    path('admin/instructors/<int:instructor_id>/toggle-status/', AdminToggleInstructorStatusView.as_view(), name='admin_toggle_instructor_status'),
+        path('admin/users/<int:user_id>/', AdminUserUpdateView.as_view(), name='admin_user_update'),
+    path('admin/users/<int:user_id>/reset-password/', AdminResetPasswordView.as_view(), name='admin_reset_password'),
+]
