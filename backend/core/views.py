@@ -437,6 +437,11 @@ class QuizSubmitView(APIView):
                 if is_correct:
                     correct_count += 1
 
+        for question in quiz.questions.all():
+            answer_file = request.FILES.get(f'answerFile_{question.id}')
+            if answer_file and Path(answer_file.name).suffix.lower() not in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'}:
+                return Response({'detail': 'Answer files must be images, PDFs, or Word documents.'}, status=status.HTTP_400_BAD_REQUEST)
+
         percentage = round((correct_count / total_questions) * 100, 1) if total_questions > 0 else 0
 
         attempt = QuizAttempt.objects.create(
@@ -450,8 +455,6 @@ class QuizSubmitView(APIView):
         for question in quiz.questions.all():
             answer_file = request.FILES.get(f'answerFile_{question.id}')
             answer_value = answers.get(str(question.id), '')
-            if answer_file and Path(answer_file.name).suffix.lower() not in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'}:
-                return Response({'detail': 'Answer files must be images, PDFs, or Word documents.'}, status=status.HTTP_400_BAD_REQUEST)
             if answer_file or answer_value:
                 QuizResponse.objects.create(attempt=attempt, question=question, text_answer=str(answer_value), answer_file=answer_file)
 

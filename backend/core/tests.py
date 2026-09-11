@@ -5,6 +5,7 @@ from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
 from .models import Chapter, Course, LearningMaterial, Quiz, Question, Choice
 from datetime import time
+import json
 
 User = get_user_model()
 
@@ -221,6 +222,26 @@ class ShireJamaLmsTests(TestCase):
         self.assertEqual(response.data['totalQuestions'], 2)
         self.assertEqual(response.data['percentage'], 50.0)
         self.assertFalse(response.data['passed'])
+
+    def test_non_multiple_choice_answers_accept_text_and_files(self):
+        course = Course.objects.create(title='Submission Course', description='Test', instructor=self.instructor, academic_levels=['CLASS_1'])
+        quiz = Quiz.objects.create(course=course, title='Written and upload quiz', results_visible_to_students=True)
+        text_question = Question.objects.create(quiz=quiz, prompt='Explain the lesson.', question_type=Question.QuestionType.LONG_ANSWER, order=1)
+        file_question = Question.objects.create(quiz=quiz, prompt='Upload your work.', question_type=Question.QuestionType.FILE_UPLOAD, order=2)
+        self.client.force_authenticate(user=self.student)
+        response = self.client.post(
+            f'/api/quizzes/{quiz.id}/submit/',
+            {
+                'answers': json.dumps({str(text_question.id): 'My written answer.'}),
+                f'answerFile_{file_question.id}': SimpleUploadedFile('answer.pdf', b'%PDF-1.4 answer'),
+            },
+            format='multipart'
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        attempt = quiz.attempts.get(student=self.student)
+        self.assertEqual(attempt.responses.count(), 2)
+        self.assertEqual(attempt.responses.get(question=text_question).text_answer, 'My written answer.')
+        self.assertTrue(attempt.responses.get(question=file_question).answer_file.name.endswith('answer.pdf'))
 
     def test_quiz_submission_respects_daily_time_window(self):
         course = Course.objects.create(title='Window Course', description='Test', instructor=self.instructor, academic_levels=['CLASS_1'])

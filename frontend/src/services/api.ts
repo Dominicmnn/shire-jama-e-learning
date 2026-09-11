@@ -212,6 +212,10 @@ export const api = {
     });
 
     const percentage = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0;
+    Object.entries(answerFiles).forEach(([questionId, file]) => {
+      if (file) answers[questionId] = answers[questionId] || '';
+    });
+
     return Promise.resolve({
       attemptId: `att-${Date.now()}`,
       resultAvailable: quiz?.resultsVisibleToStudents === true,
