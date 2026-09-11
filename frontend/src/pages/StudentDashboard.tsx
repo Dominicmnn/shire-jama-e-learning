@@ -29,7 +29,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     try { return JSON.parse(window.localStorage.getItem('shire-jama-material-progress') || '{}'); } catch { return {}; }
   });
 
-  const studentAttempts = attempts.filter((a) => (a.studentId === student.id || a.studentName === student.fullName) && a.resultAvailable !== false);
+  const studentAttempts = attempts.filter((a) => a.studentId === student.id || a.studentName === student.fullName);
 
   const markChapterDone = async (course: Course, chapter: Chapter) => {
     await api.completeChapter(course.id, chapter.id);
@@ -159,7 +159,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <td className="py-3 px-4 font-semibold text-slate-900">{att.quizTitle}</td>
                     <td className="py-3 px-4 text-slate-600 text-xs">{att.courseTitle}</td>
                     <td className="py-3 px-4">
-                      {att.score} / {att.totalQuestions}
+                      {att.isGraded === false ? 'Pending teacher grade' : `${att.finalScore ?? att.score} / ${att.totalQuestions}`}
                     </td>
                     <td className="py-3 px-4">
                       <span
@@ -167,7 +167,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           att.percentage >= 70 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                         }`}
                       >
-                        {att.percentage}%
+                        {att.isGraded === false ? 'Pending' : `${att.finalPercentage ?? att.percentage}%`}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs text-slate-500">{att.completedAt}</td>

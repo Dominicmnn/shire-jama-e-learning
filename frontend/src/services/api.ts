@@ -211,20 +211,25 @@ export const api = {
       }
     });
 
-    const percentage = totalQuestions > 0 ? Math.round((correct / totalQuestions) * 100) : 0;
+    const objectiveQuestions = quiz?.questions.filter((question) => !question.questionType || question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE').length ?? 0;
+    const hasManualQuestions = (quiz?.questions.length ?? 0) > objectiveQuestions;
+    const percentage = objectiveQuestions > 0 ? Math.round((correct / objectiveQuestions) * 100) : 0;
     Object.entries(answerFiles).forEach(([questionId, file]) => {
       if (file) answers[questionId] = answers[questionId] || '';
     });
 
     return Promise.resolve({
       attemptId: `att-${Date.now()}`,
-      resultAvailable: quiz?.resultsVisibleToStudents === true,
+      resultAvailable: quiz?.resultsVisibleToStudents === true && !hasManualQuestions,
+      isGraded: !hasManualQuestions,
       score: correct,
-      totalQuestions,
+      totalQuestions: objectiveQuestions,
       percentage,
       completedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
     });
   },
+
+  gradeQuizAttempt: async (attemptId: string, score: number, feedback: string) => Promise.resolve({ attemptId, score, feedback, isGraded: true, finalScore: score, finalPercentage: score }),
 
   adminProvisionInstructor: async (payload: { fullName: string; email: string; instructorCode?: string; temporaryPassword: string }) => {
     ensureTokens();

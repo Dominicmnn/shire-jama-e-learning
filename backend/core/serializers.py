@@ -375,6 +375,10 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
     courseTitle = serializers.CharField(source='quiz.course.title', read_only=True)
     completedAt = serializers.DateTimeField(source='completed_at', format='%Y-%m-%d %H:%M', read_only=True)
     answerReview = serializers.SerializerMethodField()
+    isGraded = serializers.SerializerMethodField()
+    finalScore = serializers.SerializerMethodField()
+    finalPercentage = serializers.SerializerMethodField()
+    manualFeedback = serializers.CharField(source='manual_feedback', read_only=True)
 
     class Meta:
         model = QuizAttempt
@@ -388,10 +392,23 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             'percentage',
             'completedAt',
             'answerReview',
+            'isGraded',
+            'finalScore',
+            'finalPercentage',
+            'manualFeedback',
         ]
 
     def get_studentName(self, obj):
         return obj.student.get_full_name() or obj.student.username
+
+    def get_isGraded(self, obj):
+        return obj.manual_score is not None or not obj.quiz.questions.exclude(question_type__in=[Question.QuestionType.MULTIPLE_CHOICE, Question.QuestionType.TRUE_FALSE]).exists()
+
+    def get_finalScore(self, obj):
+        return obj.manual_score if obj.manual_score is not None else obj.score
+
+    def get_finalPercentage(self, obj):
+        return obj.manual_score if obj.manual_score is not None else obj.percentage
 
     def get_answerReview(self, obj):
         request = self.context.get('request')
@@ -404,6 +421,11 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             selected = next((choice for choice in question.choices.all() if str(choice.id) == selected_id), None)
             correct = next((choice for choice in question.choices.all() if choice.is_correct), None)
             response = obj.responses.filter(question=question).first()
+            answer_file = None
+            if response and response.answer_file:
+                answer_file = response.answer_file.url
+                if request:
+                    answer_file = request.build_absolute_uri(answer_file)
             review.append({
                 'questionId': question.id,
                 'question': question.prompt,
@@ -411,6 +433,6 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
                 'correctAnswer': correct.text if correct else None,
                 'isCorrect': bool(selected and correct and selected.id == correct.id),
                 'textAnswer': response.text_answer if response else None,
-                'answerFile': response.answer_file.url if response and response.answer_file else None,
+                'answerFile': answer_file,
             })
         return review

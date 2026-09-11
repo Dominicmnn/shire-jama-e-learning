@@ -223,6 +223,10 @@ class QuizAttempt(models.Model):
     total_questions = models.PositiveIntegerField()
     percentage = models.FloatField()
     answers = models.JSONField(default=dict)
+    manual_score = models.PositiveIntegerField(null=True, blank=True)
+    manual_feedback = models.TextField(blank=True, default='')
+    graded_at = models.DateTimeField(null=True, blank=True)
+    graded_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='graded_attempts')
     completed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

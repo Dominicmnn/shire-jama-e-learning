@@ -89,12 +89,18 @@ export interface QuizAttempt {
   completedAt: string;
   answers: Record<string, string>; // questionId -> choiceId
   resultAvailable?: boolean;
+  isGraded?: boolean;
+  finalScore?: number;
+  finalPercentage?: number;
+  manualFeedback?: string;
   answerReview?: Array<{
     questionId: string;
     question: string;
     selectedAnswer: string | null;
     correctAnswer: string | null;
     isCorrect: boolean;
+    textAnswer?: string | null;
+    answerFile?: string | null;
   }>;
 }
 

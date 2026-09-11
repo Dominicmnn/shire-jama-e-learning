@@ -10,6 +10,7 @@ interface InstructorDashboardProps {
   onUpdateCourse: (course: Course) => void;
   onDeleteCourse: (courseId: string) => void;
   allAttempts: QuizAttempt[];
+  onUpdateAttempt: (attempt: QuizAttempt) => void;
 }
 
 export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
@@ -19,6 +20,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   onUpdateCourse,
   onDeleteCourse,
   allAttempts,
+  onUpdateAttempt,
 }) => {
   const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const [courseTitle, setCourseTitle] = useState('');
@@ -49,9 +51,14 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const [expandedAttemptId, setExpandedAttemptId] = useState<string | null>(null);
+  const [gradingAttemptId, setGradingAttemptId] = useState<string | null>(null);
+  const [gradeValue, setGradeValue] = useState('');
+  const [gradeFeedback, setGradeFeedback] = useState('');
 
   // Filter courses authored by this instructor
   const myCourses = courses.filter((c) => c.instructorId === instructor.id || c.instructorName === instructor.fullName);
+  const ownedQuizIds = new Set(myCourses.flatMap((course) => [...course.quizzes, ...course.chapters.flatMap((chapter) => chapter.quizzes)].map((quiz) => quiz.id)));
+  const visibleAttempts = allAttempts.filter((attempt) => ownedQuizIds.has(attempt.quizId));
 
   const getAttemptReview = (attempt: QuizAttempt) => {
     if (attempt.answerReview) return attempt.answerReview;
@@ -67,6 +74,16 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         isCorrect: Boolean(selected && correct && selected.id === correct.id),
       };
     }) || [];
+  };
+
+  const handleGradeAttempt = async (attempt: QuizAttempt) => {
+    const score = Number(gradeValue);
+    if (!Number.isInteger(score) || score < 0 || score > 100) return;
+    const graded = await api.gradeQuizAttempt(attempt.id, score, gradeFeedback);
+    onUpdateAttempt({ ...attempt, isGraded: true, finalScore: graded.finalScore, finalPercentage: graded.finalPercentage, manualFeedback: gradeFeedback });
+    setGradingAttemptId(null);
+    setGradeValue('');
+    setGradeFeedback('');
   };
 
   const handleCreateCourseSubmit = async (e: React.FormEvent) => {
@@ -103,8 +120,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const handleMaterialUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourseForUpload || !materialTitle.trim() || !selectedFile || !selectedChapterId) return;
-    if (selectedFile.size > 100 * 1024 * 1024) {
-      setUploadError('This file is larger than the configured 100 MB upload limit.');
+    if (selectedFile.size > 1024 * 1024 * 1024) {
+      setUploadError('This file is larger than the configured 1 GB upload limit.');
       return;
     }
 
@@ -626,7 +643,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
           <Award className="w-5 h-5 text-amber-600" />
           <span>Student Submissions Overview</span>
         </h2>
-        {allAttempts.length === 0 ? (
+        {visibleAttempts.length === 0 ? (
           <p className="text-xs text-slate-400">No attempts submitted yet.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -642,15 +659,15 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {allAttempts.map((a) => (
+                {visibleAttempts.map((a) => (
                   <React.Fragment key={a.id}>
                     <tr>
                       <td className="py-3 px-4 font-semibold text-slate-900">{a.studentName}</td>
                       <td className="py-3 px-4 text-xs">{a.quizTitle}</td>
                       <td className="py-3 px-4">
-                        {a.score} / {a.totalQuestions}
+                        {a.isGraded === false ? 'Pending' : `${a.finalScore ?? a.score} / ${a.totalQuestions}`}
                       </td>
-                      <td className="py-3 px-4 font-bold text-emerald-600">{a.percentage}%</td>
+                      <td className="py-3 px-4 font-bold text-emerald-600">{a.isGraded === false ? 'Pending' : `${a.finalPercentage ?? a.percentage}%`}</td>
                       <td className="py-3 px-4 text-xs text-slate-400">{a.completedAt}</td>
                       <td className="py-3 px-4">
                         <button
@@ -660,6 +677,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                         >
                           {expandedAttemptId === a.id ? 'Hide answers' : 'Review answers'}
                         </button>
+                        {a.isGraded === false && <button type="button" onClick={() => { setGradingAttemptId(a.id); setGradeValue(''); setGradeFeedback(''); }} className="ml-3 text-xs font-bold text-emerald-700 hover:text-emerald-900">Enter grade</button>}
                       </td>
                     </tr>
                     {expandedAttemptId === a.id && (
@@ -674,6 +692,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                                 <p className="mt-1 text-xs text-slate-600">
                                   Student answer: <span className="font-semibold">{review.selectedAnswer || 'No answer'}</span>
                                 </p>
+                                {review.textAnswer && review.textAnswer !== review.selectedAnswer && <p className="mt-1 text-xs text-slate-700">Written response: <span className="font-semibold">{review.textAnswer}</span></p>}
+                                {review.answerFile && <a href={review.answerFile} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-bold text-blue-700 underline">Open uploaded answer file</a>}
                                 <p className="text-xs text-emerald-700">
                                   Correct answer: <span className="font-semibold">{review.correctAnswer || 'Not set'}</span>
                                 </p>
@@ -685,6 +705,15 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                           </div>
                         </td>
                       </tr>
+                    )}
+                    {gradingAttemptId === a.id && (
+                      <tr><td colSpan={6} className="bg-emerald-50 px-4 py-4">
+                        <div className="flex flex-wrap items-end gap-3">
+                          <label className="text-xs font-bold text-slate-700">Grade (0-100)<input type="number" min="0" max="100" value={gradeValue} onChange={(e) => setGradeValue(e.target.value)} className="mt-1 block w-28 rounded border border-slate-300 px-2 py-1.5 text-sm" /></label>
+                          <label className="min-w-64 flex-1 text-xs font-bold text-slate-700">Feedback<textarea rows={2} value={gradeFeedback} onChange={(e) => setGradeFeedback(e.target.value)} className="mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm" /></label>
+                          <button type="button" onClick={() => handleGradeAttempt(a)} className="rounded bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Save grade</button>
+                        </div>
+                      </td></tr>
                     )}
                   </React.Fragment>
                 ))}

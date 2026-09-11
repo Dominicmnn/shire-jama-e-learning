@@ -51,6 +51,10 @@ export default function App() {
     setAttempts((prev) => [attempt, ...prev]);
   };
 
+  const handleUpdateAttempt = (updatedAttempt) => {
+    setAttempts((prev) => prev.map((attempt) => attempt.id === updatedAttempt.id ? updatedAttempt : attempt));
+  };
+
   // Instructor Actions
   const handleCreateCourse = (newCourse) => {
     setCourses((prev) => [newCourse, ...prev]);
@@ -146,6 +150,7 @@ export default function App() {
             onUpdateCourse={handleUpdateCourse}
             onDeleteCourse={handleDeleteCourse}
             allAttempts={attempts}
+            onUpdateAttempt={handleUpdateAttempt}
           />
         )}
 

@@ -261,6 +261,24 @@ class ShireJamaLmsTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Question.objects.get(quiz__title='Structured Quiz').question_file.name.endswith('.pdf'))
 
+    def test_only_course_teacher_can_view_and_grade_manual_attempt(self):
+        other_instructor = User.objects.create_user(username='other_inst', email='other@shirejama.edu', password='Password123!', role=User.Role.INSTRUCTOR)
+        course = Course.objects.create(title='Owned Course', description='Test', instructor=self.instructor, academic_levels=['CLASS_1'])
+        quiz = Quiz.objects.create(course=course, title='Manual Quiz')
+        question = Question.objects.create(quiz=quiz, prompt='Explain.', question_type=Question.QuestionType.LONG_ANSWER, order=1)
+        self.client.force_authenticate(user=self.student)
+        self.client.post(f'/api/quizzes/{quiz.id}/submit/', {'answers': json.dumps({str(question.id): 'Written response'})}, format='multipart')
+        attempt = quiz.attempts.get(student=self.student)
+        self.client.force_authenticate(user=other_instructor)
+        self.assertEqual(self.client.get('/api/quiz-results/').data, [])
+        self.assertEqual(self.client.post(f'/api/quiz-attempts/{attempt.id}/grade/', {'score': 85}).status_code, status.HTTP_403_FORBIDDEN)
+        self.client.force_authenticate(user=self.instructor)
+        self.assertEqual(self.client.get('/api/quiz-results/').data[0]['isGraded'], False)
+        grade_response = self.client.post(f'/api/quiz-attempts/{attempt.id}/grade/', {'score': 85, 'feedback': 'Good work.'})
+        self.assertEqual(grade_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(grade_response.data['finalScore'], 85)
+        self.assertTrue(grade_response.data['isGraded'])
+
     def test_quiz_submission_respects_daily_time_window(self):
         course = Course.objects.create(title='Window Course', description='Test', instructor=self.instructor, academic_levels=['CLASS_1'])
         quiz = Quiz.objects.create(course=course, title='Closed Quiz', opens_at=time(23, 0), closes_at=time(23, 30))

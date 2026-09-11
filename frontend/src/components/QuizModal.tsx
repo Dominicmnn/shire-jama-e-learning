@@ -50,6 +50,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         selectedAnswer: selected?.text || null,
         correctAnswer: correct?.text || null,
         isCorrect: Boolean(selected && correct && selected.id === correct.id),
+        textAnswer: selectedAnswers[question.id] || null,
+        answerFile: answerFiles[question.id] ? URL.createObjectURL(answerFiles[question.id]) : null,
       };
     });
 
@@ -123,8 +125,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
           <div>
             <h2 className="text-lg font-bold">{quiz.title}</h2>
             <p className="text-xs text-slate-400">
-              {courseTitle} &bull; Passing Score: {quiz.passingScorePercent}%
-              {quiz.isTimed && ` • ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')} remaining`}
+              {courseTitle}{quiz.isTimed && ` • ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')} remaining`}
             </p>
           </div>
           <button
@@ -188,7 +189,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               <div className="inline-flex p-4 rounded-full bg-emerald-100 text-emerald-700">
                 <Award className="w-12 h-12" />
               </div>
-              {attemptResult?.resultAvailable === false ? (
+              {attemptResult?.isGraded === false || attemptResult?.resultAvailable === false ? (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-6 py-8 text-amber-900">
                   <h3 className="text-xl font-bold">Assessment submitted</h3>
                   <p className="mt-2 text-sm">Your instructor has received your answers. Results will be available if your instructor authorizes student score visibility.</p>
@@ -200,7 +201,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 </p>
               </div>}
 
-              {attemptResult?.resultAvailable !== false && <div className="inline-flex items-center gap-6 px-8 py-4 rounded-xl bg-slate-100 border border-slate-200">
+              {attemptResult?.isGraded !== false && attemptResult?.resultAvailable !== false && <div className="inline-flex items-center gap-6 px-8 py-4 rounded-xl bg-slate-100 border border-slate-200">
                 <div>
                   <p className="text-xs text-slate-500 font-semibold uppercase">Score</p>
                   <p className="text-2xl font-black text-slate-900">
@@ -235,7 +236,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 </div>
               </div>}
 
-              {attemptResult?.resultAvailable !== false && attemptResult?.answerReview && (
+              {attemptResult?.isGraded !== false && attemptResult?.resultAvailable !== false && attemptResult?.answerReview && (
                 <div className="text-left space-y-3">
                   <h4 className="text-sm font-bold uppercase tracking-wide text-slate-700">Answer review</h4>
                   {attemptResult.answerReview.map((review, index) => (

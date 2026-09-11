@@ -94,7 +94,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # Keep uploads bounded for the free service; use object storage for larger media.
 FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 10 * 1024 * 1024))
-DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 100 * 1024 * 1024))
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 1024 * 1024 * 1024))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

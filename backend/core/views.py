@@ -434,6 +434,7 @@ class QuizSubmitView(APIView):
             except json.JSONDecodeError:
                 answers = {}
         total_questions = quiz.questions.count()
+        objective_questions = quiz.questions.filter(question_type__in=[Question.QuestionType.MULTIPLE_CHOICE, Question.QuestionType.TRUE_FALSE]).count()
         correct_count = 0
 
         for question in quiz.questions.all():
@@ -454,7 +455,7 @@ class QuizSubmitView(APIView):
             if answer_file and Path(answer_file.name).suffix.lower() not in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'}:
                 return Response({'detail': 'Answer files must be images, PDFs, or Word documents.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        percentage = round((correct_count / total_questions) * 100, 1) if total_questions > 0 else 0
+        percentage = round((correct_count / objective_questions) * 100, 1) if objective_questions > 0 else 0
 
         attempt = QuizAttempt.objects.create(
             student=request.user,
@@ -463,6 +464,8 @@ class QuizSubmitView(APIView):
             total_questions=total_questions,
             percentage=percentage,
             answers={str(question_id): choice_id for question_id, choice_id in answers.items()},
+            manual_score=None,
+            graded_at=timezone.now() if objective_questions == total_questions else None,
         )
         for question in quiz.questions.all():
             answer_file = request.FILES.get(f'answerFile_{question.id}')
@@ -472,13 +475,15 @@ class QuizSubmitView(APIView):
 
         response_data = {
             'attemptId': attempt.id,
-            'resultAvailable': quiz.results_visible_to_students,
+            'resultAvailable': quiz.results_visible_to_students and objective_questions == total_questions,
             'completedAt': attempt.completed_at.strftime('%Y-%m-%d %H:%M'),
+            'isGraded': objective_questions == total_questions,
+            'objectiveQuestions': objective_questions,
         }
         if quiz.results_visible_to_students:
             response_data.update({
                 'score': correct_count,
-                'totalQuestions': total_questions,
+                'totalQuestions': objective_questions,
                 'percentage': percentage,
                 'passed': percentage >= quiz.passing_score_percent,
             })
@@ -508,7 +513,7 @@ class ChapterProgressView(APIView):
         course = Course.objects.filter(id=course_id).first()
         if not course:
             return Response({'detail': 'Course not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if request.user.academic_level not in course.level_values:
+        if request.user.role != User.Role.INSTRUCTOR and request.user.academic_level not in course.level_values:
             return Response({'detail': 'You do not have access to this course.'}, status=status.HTTP_403_FORBIDDEN)
         if request.user.role == User.Role.INSTRUCTOR:
             if course.instructor_id != request.user.id:
@@ -573,6 +578,29 @@ class QuizResultsOverviewView(APIView):
 
         serializer = QuizAttemptSerializer(attempts, many=True, context={'request': request})
         return Response(serializer.data)
+
+
+class QuizAttemptGradeView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsInstructorUserRole]
+
+    def post(self, request, attempt_id):
+        attempt = QuizAttempt.objects.select_related('quiz__course').filter(id=attempt_id).first()
+        if not attempt:
+            return Response({'detail': 'Quiz attempt not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if attempt.quiz.course.instructor_id != request.user.id and not request.user.is_superuser:
+            return Response({'detail': 'You can only grade attempts for your own courses.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            score = int(request.data.get('score'))
+        except (TypeError, ValueError):
+            return Response({'score': ['Enter a whole-number grade from 0 to 100.']}, status=status.HTTP_400_BAD_REQUEST)
+        if score < 0 or score > 100:
+            return Response({'score': ['Grade must be between 0 and 100.']}, status=status.HTTP_400_BAD_REQUEST)
+        attempt.manual_score = score
+        attempt.manual_feedback = str(request.data.get('feedback', '')).strip()
+        attempt.graded_by = request.user
+        attempt.graded_at = timezone.now()
+        attempt.save(update_fields=['manual_score', 'manual_feedback', 'graded_by', 'graded_at'])
+        return Response(QuizAttemptSerializer(attempt, context={'request': request}).data)
 
 
 # ----------------------------------------------------------------------

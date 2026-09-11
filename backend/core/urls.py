@@ -13,6 +13,7 @@ from .views import (
     QuizCreateView,
     QuizSubmitView,
     QuizResultsOverviewView,
+    QuizAttemptGradeView,
     AdminInstructorManagementView,
     AdminToggleInstructorStatusView,
         AdminUserUpdateView,
@@ -44,6 +45,7 @@ urlpatterns = [
     path('courses/<int:course_id>/quizzes/', QuizCreateView.as_view(), name='quiz_create'),
     path('quizzes/<int:quiz_id>/submit/', QuizSubmitView.as_view(), name='quiz_submit'),
     path('quiz-results/', QuizResultsOverviewView.as_view(), name='quiz_results_overview'),
+    path('quiz-attempts/<int:attempt_id>/grade/', QuizAttemptGradeView.as_view(), name='quiz_attempt_grade'),
 
     # ------------------------------------------------
     # Institutional Admin Management
