@@ -2,7 +2,7 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     CustomTokenObtainPairView,
-    StudentRegisterView,
+    AdminStudentManagementView,
     CurrentUserProfileView,
     CourseListView,
     CourseDetailView,
@@ -25,7 +25,7 @@ urlpatterns = [
     # ------------------------------------------------
     path('auth/login/', CustomTokenObtainPairView.as_view(), name='auth_login'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('auth/register/student/', StudentRegisterView.as_view(), name='student_register'),
+    path('admin/students/', AdminStudentManagementView.as_view(), name='admin_students'),
     path('auth/me/', CurrentUserProfileView.as_view(), name='current_user_profile'),
 
     # ------------------------------------------------

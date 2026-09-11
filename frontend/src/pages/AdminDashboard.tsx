@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Course, QuizAttempt, User } from '../types';
+import { ACADEMIC_LEVELS, AcademicLevel, Course, QuizAttempt, User } from '../types';
 import { api } from '../services/api';
 import { Shield, UserPlus, Users, KeyRound, BookOpen, Award, RefreshCw, Pencil } from 'lucide-react';
 
@@ -25,6 +25,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onResetPassword,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [studentFullName, setStudentFullName] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
+  const [studentUsername, setStudentUsername] = useState('');
+  const [studentPassword, setStudentPassword] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [studentLevel, setStudentLevel] = useState<AcademicLevel>('CLASS_1');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [instCode, setInstCode] = useState('');
@@ -79,6 +86,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setFullName('');
     setEmail('');
     setInstCode('');
+  };
+
+  const handleEnrollStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const payload = { fullName: studentFullName, email: studentEmail, username: studentUsername, password: studentPassword, studentId, academicLevel: studentLevel };
+    try {
+      const student = await api.adminProvisionStudent(payload);
+      onAddInstructor(student);
+    } catch {
+      const student: User = { id: `u-std-${Date.now()}`, username: studentUsername, fullName: studentFullName, email: studentEmail, role: 'STUDENT', isActive: true, dateJoined: new Date().toISOString().split('T')[0], studentId: studentId || `STD-${Date.now()}`, academicLevel: studentLevel };
+      onAddInstructor(student);
+    }
+    setLoading(false);
+    setShowStudentModal(false);
+    setStudentFullName(''); setStudentEmail(''); setStudentUsername(''); setStudentPassword(''); setStudentId('');
   };
 
   const handleToggleStatus = async (user: User) => {
@@ -156,7 +179,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold font-serif">{adminUser.fullName}</h1>
           <p className="mt-1 text-sm text-slate-300">
-            Oversee institutional accounts, provision faculty instructors, audit course offerings, and maintain security.
+            Oversee institutional accounts, provision teachers, audit course offerings, and maintain security.
           </p>
         </div>
         <button
@@ -164,9 +187,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-lg shadow transition-colors"
         >
           <UserPlus className="w-4 h-4" />
-          <span>Provision Faculty</span>
+          <span>Provision Teacher</span>
+        </button>
+        <button onClick={() => setShowStudentModal(true)} className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-lg shadow transition-colors">
+          <UserPlus className="w-4 h-4" /><span>Enroll Student</span>
         </button>
       </div>
+
+      {showStudentModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">Enroll Student and Issue Credentials</h3>
+            <form onSubmit={handleEnrollStudentSubmit} className="space-y-3">
+              <input required value={studentFullName} onChange={(e) => setStudentFullName(e.target.value)} placeholder="Student full name" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+              <input required type="email" value={studentEmail} onChange={(e) => setStudentEmail(e.target.value)} placeholder="Student email" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+              <input required value={studentUsername} onChange={(e) => setStudentUsername(e.target.value)} placeholder="Login username" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+              <input required minLength={6} value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} placeholder="Temporary password" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+              <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="Student ID (optional)" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+              <select value={studentLevel} onChange={(e) => setStudentLevel(e.target.value as AcademicLevel)} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm">{ACADEMIC_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}</select>
+              <p className="text-xs text-slate-500">Give the generated student ID or username and password to the enrolled student.</p>
+              <div className="flex justify-end gap-2"><button type="button" onClick={() => setShowStudentModal(false)} className="px-4 py-2 text-sm text-slate-600">Cancel</button><button disabled={loading} className="px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-md">Enroll Student</button></div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -176,7 +220,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs text-slate-500 font-semibold uppercase">Faculty Instructors</p>
+              <p className="text-xs text-slate-500 font-semibold uppercase">Teachers</p>
               <p className="text-2xl font-black text-slate-900">{instructors.length}</p>
             </div>
           </div>
@@ -223,7 +267,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Provision Faculty Instructor Account</h3>
+            <h3 className="text-lg font-bold text-slate-900">Provision Teacher Account</h3>
             <form onSubmit={handleAddInstructorSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Full Name & Title</label>
@@ -362,17 +406,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Faculty Instructors Roster */}
+      {/* Teacher roster */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
         <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
           <Shield className="w-5 h-5 text-emerald-700" />
-          <span>Institutional Faculty Roster</span>
+          <span>Institutional Teacher Roster</span>
         </h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">Faculty Member</th>
+                <th className="py-3 px-4">Teacher</th>
                 <th className="py-3 px-4">Code</th>
                 <th className="py-3 px-4">Email</th>
                 <th className="py-3 px-4">Status</th>

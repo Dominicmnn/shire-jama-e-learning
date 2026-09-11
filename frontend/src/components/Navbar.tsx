@@ -9,7 +9,6 @@ interface NavbarProps {
   users: User[];
   onLoginSuccess: (user: User) => void;
   onLogout: () => void;
-  onStudentRegister: (newStudent: User) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -17,7 +16,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   users,
   onLoginSuccess,
   onLogout,
-  onStudentRegister,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -32,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       case 'INSTRUCTOR':
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-            <BookOpen className="w-3 h-3" /> Faculty Instructor
+            <BookOpen className="w-3 h-3" /> Teacher
           </span>
         );
       case 'STUDENT':
@@ -107,7 +105,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             onLoginSuccess(user);
             setIsModalOpen(false);
           }}
-          onStudentRegister={onStudentRegister}
         />
       )}
     </>

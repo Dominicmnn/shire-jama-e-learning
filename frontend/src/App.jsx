@@ -47,15 +47,6 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Student Actions
-  const handleStudentRegister = (newStudent) => {
-    setUsers((prev) => {
-      const updated = [...prev, newStudent];
-      window.localStorage.setItem('shire-jama-users', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
   const handleQuizSubmit = (attempt) => {
     setAttempts((prev) => [attempt, ...prev]);
   };
@@ -116,7 +107,6 @@ export default function App() {
         users={users}
         onLoginSuccess={handleLoginSuccess}
         onLogout={handleLogout}
-        onStudentRegister={handleStudentRegister}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -19,6 +19,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   onSubmitAttempt,
 }) => {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [answerFiles, setAnswerFiles] = useState<Record<string, File>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [attemptResult, setAttemptResult] = useState<QuizAttempt | null>(null);
   const [secondsLeft, setSecondsLeft] = useState((quiz?.timeLimitMinutes ?? 0) * 60);
@@ -54,7 +55,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
     // Try backend evaluation first
     try {
-      const res = await api.submitQuiz(quiz.id, selectedAnswers);
+      const res = await api.submitQuiz(quiz.id, selectedAnswers, answerFiles);
       const attempt: QuizAttempt = {
         id: `att-${res.attemptId || Date.now()}`,
         quizId: quiz.id,
@@ -112,7 +113,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     }
   };
 
-  const allAnswered = quiz.questions.every((q) => selectedAnswers[q.id]);
+  const allAnswered = quiz.questions.every((q) => selectedAnswers[q.id] || answerFiles[q.id]);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -154,7 +155,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                       <span>{q.prompt}</span>
                     </p>
 
-                    <div className="grid grid-cols-1 gap-2 pl-8">
+                    {q.questionType === 'SHORT_ANSWER' && <input value={selectedAnswers[q.id] || ''} onChange={(e) => handleSelect(q.id, e.target.value)} placeholder="Enter a short answer" className="ml-8 w-[calc(100%-2rem)] px-3 py-2 border border-slate-300 rounded-md text-sm" />}
+                    {q.questionType === 'LONG_ANSWER' && <textarea value={selectedAnswers[q.id] || ''} onChange={(e) => handleSelect(q.id, e.target.value)} placeholder="Write your answer" rows={4} className="ml-8 w-[calc(100%-2rem)] px-3 py-2 border border-slate-300 rounded-md text-sm" />}
+                    {q.questionType === 'FILE_UPLOAD' && <input type="file" accept="image/*,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => { const file = e.target.files?.[0]; if (file) setAnswerFiles((previous) => ({ ...previous, [q.id]: file })); }} className="ml-8 w-[calc(100%-2rem)] text-sm" />}
+                    {(q.questionType === 'MULTIPLE_CHOICE' || q.questionType === 'TRUE_FALSE' || !q.questionType) && <div className="grid grid-cols-1 gap-2 pl-8">
                       {q.choices.map((c) => {
                         const isSelected = selectedAnswers[q.id] === c.id;
                         return (
@@ -172,7 +176,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                           </button>
                         );
                       })}
-                    </div>
+                    </div>}
                   </div>
                 ))}
               </div>

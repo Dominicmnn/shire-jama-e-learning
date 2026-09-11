@@ -91,9 +91,9 @@ export const api = {
     return Promise.resolve({ user: matchedUser, accessToken: 'demo-token', refreshToken: 'demo-refresh-token' });
   },
 
-  registerStudent: async (fullName: string, email: string, password: string, academicLevel: AcademicLevel) => {
+  adminProvisionStudent: async (payload: { fullName: string; email: string; username: string; password: string; studentId?: string; academicLevel: AcademicLevel }) => {
     ensureTokens();
-    const emailTrimmed = email.trim().toLowerCase();
+    const emailTrimmed = payload.email.trim().toLowerCase();
     const storedUsers = getStoredUsers();
     const existing = storedUsers.find((user) => user.email.toLowerCase() === emailTrimmed);
     if (existing) {
@@ -103,28 +103,28 @@ export const api = {
     const idSuffix = Math.floor(100 + Math.random() * 900);
     const newStudent: User = {
       id: `u-std-${Date.now()}`,
-      username: emailTrimmed.split('@')[0],
-      fullName: fullName.trim(),
+      username: payload.username.trim() || emailTrimmed.split('@')[0],
+      fullName: payload.fullName.trim(),
       email: emailTrimmed,
       role: 'STUDENT',
       isActive: true,
       dateJoined: new Date().toISOString().split('T')[0],
-      studentId: `STD-${new Date().getFullYear()}-${idSuffix}`,
-      academicLevel,
+      studentId: payload.studentId || `STD-${new Date().getFullYear()}-${idSuffix}`,
+      academicLevel: payload.academicLevel,
     };
 
     storeUsers([...storedUsers, newStudent]);
     return Promise.resolve(newStudent);
   },
 
-  createCourse: async (title: string, description: string, academicLevels: AcademicLevel[]) => {
+  createCourse: async (title: string, description: string, academicLevels: AcademicLevel[], instructor: User) => {
     ensureTokens();
     const newCourse: Course = {
       id: `c-${Date.now()}`,
       title: title.trim(),
       description: description.trim(),
-      instructorId: 'u-inst-1',
-      instructorName: 'Ustadh Ali Nur',
+      instructorId: instructor.id,
+      instructorName: instructor.fullName,
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
       materials: [],
@@ -186,7 +186,17 @@ export const api = {
     return Promise.resolve({ chapterId, completed: true });
   },
 
-  submitQuiz: async (quizId: string, answers: Record<string, string>) => {
+  trackMaterialProgress: async (courseId: string, materialId: string, progressPercent: number) => {
+    ensureTokens();
+    if (typeof window !== 'undefined') {
+      const progress = JSON.parse(window.localStorage.getItem('shire-jama-material-progress') || '{}');
+      progress[`${courseId}:${materialId}`] = { opened: true, progressPercent };
+      window.localStorage.setItem('shire-jama-material-progress', JSON.stringify(progress));
+    }
+    return Promise.resolve({ materialId, opened: true, progressPercent });
+  },
+
+  submitQuiz: async (quizId: string, answers: Record<string, string>, answerFiles: Record<string, File> = {}) => {
     ensureTokens();
     const seededQuiz = INITIAL_COURSES_WITH_CHAPTERS.flatMap((entry) => entry.quizzes).find((quiz) => quiz.id === quizId);
     const quiz = seededQuiz || getCreatedQuizzes().find((entry) => entry.id === quizId);

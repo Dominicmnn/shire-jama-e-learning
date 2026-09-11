@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ACADEMIC_LEVELS, AcademicLevel, UserRole, User } from '../types';
+import { UserRole, User } from '../types';
 import { SchoolLogo } from './SchoolLogo';
 import { GraduationCap, BookOpen, Shield, ArrowLeft, CheckCircle2, AlertCircle, RefreshCw, X } from 'lucide-react';
 import { api } from '../services/api';
@@ -9,7 +9,6 @@ interface WhoAreYouModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginSuccess: (user: User) => void;
-  onStudentRegister: (newStudent: User) => void;
 }
 
 export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
@@ -17,18 +16,12 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess,
-  onStudentRegister,
 }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [isRegisteringStudent, setIsRegisteringStudent] = useState(false);
 
   // Form Inputs
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [regFullName, setRegFullName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regAcademicLevel, setRegAcademicLevel] = useState<AcademicLevel | ''>('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,14 +30,12 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
 
   const handleSelectRole = (role: UserRole) => {
     setSelectedRole(role);
-    setIsRegisteringStudent(false);
     setErrorMsg('');
     setSuccessMsg('');
   };
 
   const handleBackToRoles = () => {
     setSelectedRole(null);
-    setIsRegisteringStudent(false);
     setErrorMsg('');
     setSuccessMsg('');
   };
@@ -93,59 +84,6 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
       }
 
       onLoginSuccess(matched);
-    }
-  };
-
-  const handleStudentRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (!regFullName.trim() || !regEmail.trim() || !regPassword || !regAcademicLevel) {
-      setErrorMsg('All registration fields are required.');
-      return;
-    }
-
-    setLoading(true);
-
-    // Try live Django backend student register
-    try {
-      const student = await api.registerStudent(regFullName.trim(), regEmail.trim(), regPassword, regAcademicLevel);
-      onStudentRegister(student);
-      setSuccessMsg('Registration complete.');
-      setTimeout(() => {
-        onLoginSuccess(student);
-        setLoading(false);
-      }, 700);
-      return;
-    } catch {
-      // Fallback to local memory registration
-      const emailTrimmed = regEmail.trim().toLowerCase();
-      const existing = users.find((u) => u.email.toLowerCase() === emailTrimmed);
-      if (existing) {
-        setLoading(false);
-        setErrorMsg('An account with this email address already exists. Please sign in instead.');
-        return;
-      }
-
-      const idSuffix = Math.floor(100 + Math.random() * 900);
-      const newStudent: User = {
-        id: `u-std-${Date.now()}`,
-        username: emailTrimmed.split('@')[0],
-        fullName: regFullName.trim(),
-        email: emailTrimmed,
-        role: 'STUDENT',
-        isActive: true,
-        dateJoined: new Date().toISOString().split('T')[0],
-        studentId: `STD-${new Date().getFullYear()}-${idSuffix}`,
-        academicLevel: regAcademicLevel,
-      };
-
-      onStudentRegister(newStudent);
-      setSuccessMsg('Registration complete.');
-      setTimeout(() => {
-        onLoginSuccess(newStudent);
-        setLoading(false);
-      }, 600);
     }
   };
 
@@ -205,7 +143,7 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
                     <BookOpen className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">Faculty Instructor</h3>
+                      <h3 className="font-bold text-slate-900 text-sm">Teacher</h3>
                     <p className="text-xs text-slate-500 mt-0.5">
                       Publish courses, upload PDF readers & video lectures, and evaluate students.
                     </p>
@@ -223,7 +161,7 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm">Institutional Administrator</h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Provision faculty accounts, manage active user statuses, and view analytics.
+                      Provision teacher accounts, manage active user statuses, and view analytics.
                     </p>
                   </div>
                 </button>
@@ -256,148 +194,23 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
                 </div>
               )}
 
-              {/* Student Views: Tabs for Login vs Self-Register */}
+              {/* Student login */}
               {selectedRole === 'STUDENT' ? (
                 <div>
-                  <div className="flex border-b border-slate-200 mb-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRegisteringStudent(false);
-                        setErrorMsg('');
-                      }}
-                      className={`pb-2 px-4 text-xs font-bold transition-colors ${
-                        !isRegisteringStudent
-                          ? 'border-b-2 border-blue-600 text-blue-600'
-                          : 'text-slate-400 hover:text-slate-700'
-                      }`}
-                    >
-                      Sign In
+                  <p className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">Student accounts are created by the administrator. Use the student ID or username and password provided to you.</p>
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Username, Student ID, or Email</label>
+                      <input type="text" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="e.g. STD-2026-1001" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Password</label>
+                      <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+                    </div>
+                    <button type="submit" disabled={loading} className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-sm rounded-md flex items-center justify-center gap-2">
+                      {loading && <RefreshCw className="w-4 h-4 animate-spin" />} Sign In as Student
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRegisteringStudent(true);
-                        setErrorMsg('');
-                      }}
-                      className={`pb-2 px-4 text-xs font-bold transition-colors ${
-                        isRegisteringStudent
-                          ? 'border-b-2 border-blue-600 text-blue-600'
-                          : 'text-slate-400 hover:text-slate-700'
-                      }`}
-                    >
-                      New Student Self-Registration
-                    </button>
-                  </div>
-
-                  {!isRegisteringStudent ? (
-                    /* Student Login Form */
-                    <form onSubmit={handleSignIn} className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                          Username or Student Email
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={identifier}
-                          onChange={(e) => setIdentifier(e.target.value)}
-                          placeholder="e.g. faiza or faiza.hassan@example.com"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                          Password
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-sm rounded-md transition-colors shadow-sm flex items-center justify-center gap-2"
-                      >
-                        {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                        Sign In as Student
-                      </button>
-
-                    </form>
-                  ) : (
-                    /* Student Registration Form */
-                    <form onSubmit={handleStudentRegister} className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                          Class or Form
-                        </label>
-                        <select
-                          required
-                          value={regAcademicLevel}
-                          onChange={(e) => setRegAcademicLevel(e.target.value as AcademicLevel)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        >
-                          <option value="">Select your class or form</option>
-                          {ACADEMIC_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                          Full Legal Name
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={regFullName}
-                          onChange={(e) => setRegFullName(e.target.value)}
-                          placeholder="e.g. Amina Duale"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                          Email Address
-                        </label>
-                        <input
-                          type="email"
-                          required
-                          value={regEmail}
-                          onChange={(e) => setRegEmail(e.target.value)}
-                          placeholder="amina@example.com"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                          Create Password
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          minLength={6}
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          placeholder="At least 6 characters"
-                          className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-bold text-sm rounded-md transition-colors shadow-sm mt-2 flex items-center justify-center gap-2"
-                      >
-                        {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                        Complete Student Registration
-                      </button>
-                    </form>
-                  )}
+                  </form>
                 </div>
               ) : (
                 /* Instructor / Admin Form */

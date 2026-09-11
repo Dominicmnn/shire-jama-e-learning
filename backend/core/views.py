@@ -8,9 +8,10 @@ from datetime import time
 from django.utils import timezone
 import mimetypes
 from pathlib import Path
+import json
 from django.db.models import Q
 
-from .models import Chapter, ChapterProgress, Course, LearningMaterial, Quiz, Question, Choice, QuizAttempt
+from .models import Chapter, ChapterProgress, Course, LearningMaterial, MaterialProgress, Quiz, Question, Choice, QuizAttempt, QuizResponse
 from .permissions import (
     IsAdminUserRole,
     IsInstructorUserRole,
@@ -19,7 +20,7 @@ from .permissions import (
 )
 from .serializers import (
     UserProfileSerializer,
-    StudentRegistrationSerializer,
+    AdminCreateStudentSerializer,
     AdminCreateInstructorSerializer,
     AdminUserUpdateSerializer,
     CourseListSerializer,
@@ -57,18 +58,14 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
 
 
-class StudentRegisterView(APIView):
-    """
-    Public student self-registration endpoint.
-    Strictly creates accounts with role=STUDENT.
-    """
-    permission_classes = [permissions.AllowAny]
+class AdminStudentManagementView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsAdminUserRole]
 
     def post(self, request):
-        serializer = StudentRegistrationSerializer(data=request.data)
+        serializer = AdminCreateStudentSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Registration complete."}, status=status.HTTP_201_CREATED)
+            student = serializer.save()
+            return Response(UserProfileSerializer(student).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -112,7 +109,7 @@ class CourseListView(APIView):
     def post(self, request):
         if request.user.role != User.Role.INSTRUCTOR and not request.user.is_superuser:
             return Response(
-                {"detail": "Only faculty instructors can create new courses."},
+                {"detail": "Only teachers can create new courses."},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -377,7 +374,11 @@ class QuizCreateView(APIView):
                 prompt = q_data.get('prompt', '').strip()
                 if not prompt:
                     continue
-                question = Question.objects.create(quiz=quiz, prompt=prompt, order=idx)
+                question_type = q_data.get('questionType', Question.QuestionType.MULTIPLE_CHOICE)
+                valid_types = {value for value, _ in Question.QuestionType.choices}
+                if question_type not in valid_types:
+                    raise ValueError('Invalid question type.')
+                question = Question.objects.create(quiz=quiz, prompt=prompt, order=idx, question_type=question_type)
                 for c_data in q_data.get('choices', []):
                     text = c_data.get('text', '').strip()
                     if text:
@@ -414,12 +415,19 @@ class QuizSubmitView(APIView):
             if not within_window:
                 return Response({'detail': 'This quiz is currently closed.'}, status=status.HTTP_403_FORBIDDEN)
 
-        answers = request.data.get('answers', {})  # Dict: { str(question_id): choice_id }
+        answers = request.data.get('answers', {})
+        if isinstance(answers, str):
+            try:
+                answers = json.loads(answers)
+            except json.JSONDecodeError:
+                answers = {}
         total_questions = quiz.questions.count()
         correct_count = 0
 
         for question in quiz.questions.all():
             selected_choice_id = answers.get(str(question.id))
+            if question.question_type not in [Question.QuestionType.MULTIPLE_CHOICE, Question.QuestionType.TRUE_FALSE]:
+                continue
             if selected_choice_id:
                 is_correct = Choice.objects.filter(
                     id=selected_choice_id,
@@ -439,6 +447,13 @@ class QuizSubmitView(APIView):
             percentage=percentage,
             answers={str(question_id): choice_id for question_id, choice_id in answers.items()},
         )
+        for question in quiz.questions.all():
+            answer_file = request.FILES.get(f'answerFile_{question.id}')
+            answer_value = answers.get(str(question.id), '')
+            if answer_file and Path(answer_file.name).suffix.lower() not in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'}:
+                return Response({'detail': 'Answer files must be images, PDFs, or Word documents.'}, status=status.HTTP_400_BAD_REQUEST)
+            if answer_file or answer_value:
+                QuizResponse.objects.create(attempt=attempt, question=question, text_answer=str(answer_value), answer_file=answer_file)
 
         response_data = {
             'attemptId': attempt.id,
@@ -472,7 +487,7 @@ class ChapterCreateView(APIView):
 
 
 class ChapterProgressView(APIView):
-    permission_classes = [permissions.IsAuthenticated, IsStudentUserRole]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, course_id):
         course = Course.objects.filter(id=course_id).first()
@@ -480,6 +495,18 @@ class ChapterProgressView(APIView):
             return Response({'detail': 'Course not found.'}, status=status.HTTP_404_NOT_FOUND)
         if request.user.academic_level not in course.level_values:
             return Response({'detail': 'You do not have access to this course.'}, status=status.HTTP_403_FORBIDDEN)
+        if request.user.role == User.Role.INSTRUCTOR:
+            if course.instructor_id != request.user.id:
+                return Response({'detail': 'You do not own this course.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'students': [
+                {'studentId': student.id, 'studentName': student.get_full_name() or student.username, 'materials': [
+                    {'materialId': material.id, 'title': material.title, 'type': material.material_type,
+                     'opened': bool(progress and progress.opened), 'progressPercent': progress.progress_percent if progress else 0}
+                    for material in course.materials.all()
+                    for progress in [MaterialProgress.objects.filter(student=student, material=material).first()]
+                ]}
+                for student in User.objects.filter(role=User.Role.STUDENT, academic_level__in=course.level_values)
+            ]})
         chapter_ids = Chapter.objects.filter(course_id=course_id).values_list('id', flat=True)
         completed = set(ChapterProgress.objects.filter(student=request.user, chapter_id__in=chapter_ids).values_list('chapter_id', flat=True))
         total = len(chapter_ids)
@@ -489,6 +516,16 @@ class ChapterProgressView(APIView):
         course = Course.objects.filter(id=course_id).first()
         if not course or request.user.academic_level not in course.level_values:
             return Response({'detail': 'You do not have access to this course.'}, status=status.HTTP_403_FORBIDDEN)
+        material_id = request.data.get('materialId')
+        if material_id:
+            material = LearningMaterial.objects.filter(id=material_id, course_id=course_id).first()
+            if not material:
+                return Response({'detail': 'Material not found.'}, status=status.HTTP_404_NOT_FOUND)
+            progress, _ = MaterialProgress.objects.get_or_create(student=request.user, material=material)
+            progress.opened = True
+            progress.progress_percent = max(0, min(100, int(request.data.get('progressPercent', progress.progress_percent))))
+            progress.save()
+            return Response({'materialId': material.id, 'opened': True, 'progressPercent': progress.progress_percent})
         chapter = Chapter.objects.filter(id=request.data.get('chapterId'), course_id=course_id).first()
         if not chapter:
             return Response({'detail': 'Chapter not found.'}, status=status.HTTP_404_NOT_FOUND)

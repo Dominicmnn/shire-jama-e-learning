@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from .models import Chapter, ChapterProgress, Course, LearningMaterial, Quiz, Question, Choice, QuizAttempt
+from .models import Chapter, ChapterProgress, Course, LearningMaterial, MaterialProgress, Quiz, Question, Choice, QuizAttempt
 
 User = get_user_model()
 
@@ -34,14 +34,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return obj.get_full_name() or obj.username
 
 
-class StudentRegistrationSerializer(serializers.ModelSerializer):
+class AdminCreateStudentSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField(write_only=True, required=True)
     academicLevel = serializers.ChoiceField(source='academic_level', choices=User.AcademicLevel.choices, required=True)
     password = serializers.CharField(write_only=True, required=True, min_length=6)
+    username = serializers.CharField(required=False)
+    studentId = serializers.CharField(source='student_id', required=False)
 
     class Meta:
         model = User
-        fields = ['fullName', 'email', 'password', 'academicLevel']
+        fields = ['fullName', 'email', 'username', 'password', 'studentId', 'academicLevel']
 
     def validate_email(self, value):
         normalized = value.strip().lower()
@@ -53,12 +55,14 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
         full_name = validated_data.pop('fullName').strip()
         email = validated_data['email']
         password = validated_data['password']
+        requested_username = validated_data.pop('username', None)
+        requested_student_id = validated_data.pop('student_id', None)
 
         names = full_name.split(' ', 1)
         first_name = names[0]
         last_name = names[1] if len(names) > 1 else ''
 
-        username = email.split('@')[0]
+        username = requested_username or email.split('@')[0]
         # Avoid collision if username exists
         base_username = username
         counter = 1
@@ -67,7 +71,7 @@ class StudentRegistrationSerializer(serializers.ModelSerializer):
             counter += 1
 
         student_count = User.objects.filter(role=User.Role.STUDENT).count()
-        student_id = f"STD-2024-{student_count + 1001}"
+        student_id = requested_student_id or f"STD-2024-{student_count + 1001}"
 
         user = User.objects.create_user(
             username=username,
@@ -220,7 +224,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['id', 'prompt', 'order', 'choices']
+        fields = ['id', 'prompt', 'order', 'question_type', 'choices']
 
 
 class QuizSerializer(serializers.ModelSerializer):
@@ -391,11 +395,14 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             selected_id = str(obj.answers.get(str(question.id), ''))
             selected = next((choice for choice in question.choices.all() if str(choice.id) == selected_id), None)
             correct = next((choice for choice in question.choices.all() if choice.is_correct), None)
+            response = obj.responses.filter(question=question).first()
             review.append({
                 'questionId': question.id,
                 'question': question.prompt,
                 'selectedAnswer': selected.text if selected else None,
                 'correctAnswer': correct.text if correct else None,
                 'isCorrect': bool(selected and correct and selected.id == correct.id),
+                'textAnswer': response.text_answer if response else None,
+                'answerFile': response.answer_file.url if response and response.answer_file else None,
             })
         return review

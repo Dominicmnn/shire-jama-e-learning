@@ -46,6 +46,7 @@ export interface Choice {
 export interface Question {
   id: string;
   prompt: string;
+  questionType?: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'LONG_ANSWER' | 'FILE_UPLOAD';
   choices: Choice[];
 }
 

@@ -25,12 +25,22 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [completedChapters, setCompletedChapters] = useState<Record<string, boolean>>(() => {
     try { return JSON.parse(window.localStorage.getItem('shire-jama-chapter-progress') || '{}'); } catch { return {}; }
   });
+  const [materialProgress, setMaterialProgress] = useState<Record<string, { opened: boolean; progressPercent: number }>>(() => {
+    try { return JSON.parse(window.localStorage.getItem('shire-jama-material-progress') || '{}'); } catch { return {}; }
+  });
 
   const studentAttempts = attempts.filter((a) => (a.studentId === student.id || a.studentName === student.fullName) && a.resultAvailable !== false);
 
   const markChapterDone = async (course: Course, chapter: Chapter) => {
     await api.completeChapter(course.id, chapter.id);
     setCompletedChapters((previous) => ({ ...previous, [`${course.id}:${chapter.id}`]: true }));
+  };
+
+  const openMaterial = async (course: Course, material: LearningMaterial) => {
+    const progressPercent = material.type === 'PDF' ? 100 : 0;
+    await api.trackMaterialProgress(course.id, material.id, progressPercent);
+    setMaterialProgress((previous) => ({ ...previous, [`${course.id}:${material.id}`]: { opened: true, progressPercent } }));
+    if (material.type === 'PDF') setActivePdf(material); else setActiveVideo(material);
   };
 
   return (
@@ -87,7 +97,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <div className="flex justify-between items-center">
                       <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Course Chapters</p>
                       <span className="text-xs font-bold text-blue-700">
-                        {Math.round((course.chapters.filter((chapter) => completedChapters[`${course.id}:${chapter.id}`]).length / course.chapters.length) * 100)}% complete
+                        {Math.round((course.chapters.reduce((sum, chapter) => sum + chapter.materials.reduce((materialSum, material) => materialSum + (materialProgress[`${course.id}:${material.id}`]?.progressPercent || 0), 0), 0) / Math.max(1, course.chapters.reduce((sum, chapter) => sum + chapter.materials.length * 100, 0))) * 100)}% complete
                       </span>
                     </div>
                     {course.chapters.map((chapter) => {
@@ -105,9 +115,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                             </button>
                           </div>
                           {chapter.materials.map((material) => (
-                            <button key={material.id} onClick={() => material.type === 'PDF' ? setActivePdf(material) : setActiveVideo(material)} className="mt-2 mr-2 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100">
+                            <React.Fragment key={material.id}>
+                            <button onClick={() => openMaterial(course, material)} className="mt-2 mr-2 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-blue-800 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100">
                               {material.type === 'PDF' ? <FileText className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}{material.type === 'PDF' ? 'View PDF: ' : 'Watch Video: '}{material.title}
                             </button>
+                            {materialProgress[`${course.id}:${material.id}`] && <div className="ml-1 mt-1 h-1.5 w-full max-w-xs rounded-full bg-slate-200"><div className="h-1.5 rounded-full bg-emerald-500" style={{ width: `${materialProgress[`${course.id}:${material.id}`].progressPercent}%` }} /></div>}
+                            </React.Fragment>
                           ))}
                           {chapter.quizzes.map((quiz) => <button key={quiz.id} onClick={() => setActiveQuiz({ quiz, courseTitle: course.title })} className="mt-2 mr-2 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100"><CheckCircle2 className="w-3.5 h-3.5" />Start Quiz: {quiz.title}</button>)}
                         </div>

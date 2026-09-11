@@ -167,12 +167,20 @@ class Quiz(models.Model):
 
 
 class Question(models.Model):
+    class QuestionType(models.TextChoices):
+        MULTIPLE_CHOICE = 'MULTIPLE_CHOICE', 'Multiple choice'
+        TRUE_FALSE = 'TRUE_FALSE', 'True or false'
+        SHORT_ANSWER = 'SHORT_ANSWER', 'Short answer'
+        LONG_ANSWER = 'LONG_ANSWER', 'Long answer'
+        FILE_UPLOAD = 'FILE_UPLOAD', 'File upload'
+
     quiz = models.ForeignKey(
         Quiz,
         on_delete=models.CASCADE,
         related_name='questions'
     )
     prompt = models.TextField()
+    question_type = models.CharField(max_length=20, choices=QuestionType.choices, default=QuestionType.MULTIPLE_CHOICE)
     order = models.PositiveIntegerField(default=1)
 
     class Meta:
@@ -221,6 +229,26 @@ class QuizAttempt(models.Model):
 
     def __str__(self):
         return f"{self.student.get_full_name()} - {self.quiz.title}: {self.score}/{self.total_questions}"
+
+
+class QuizResponse(models.Model):
+    attempt = models.ForeignKey(QuizAttempt, on_delete=models.CASCADE, related_name='responses')
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='responses')
+    text_answer = models.TextField(blank=True, default='')
+    answer_file = models.FileField(upload_to='quiz_answers/%Y/%m/', blank=True, null=True)
+
+
+class MaterialProgress(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='material_progress')
+    material = models.ForeignKey(LearningMaterial, on_delete=models.CASCADE, related_name='student_progress')
+    opened = models.BooleanField(default=False)
+    progress_percent = models.PositiveIntegerField(default=0)
+    last_opened_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['student', 'material'], name='unique_student_material_progress'),
+        ]
 
 
 class ChapterProgress(models.Model):

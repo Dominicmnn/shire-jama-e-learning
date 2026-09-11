@@ -40,13 +40,24 @@ class ShireJamaLmsTests(TestCase):
             , academic_level='CLASS_1'
         )
 
-    def test_student_registration(self):
-        """Verify public student self-registration creates active student account."""
-        response = self.client.post('/api/auth/register/student/', {
+    def test_admin_enrolls_student(self):
+        """Verify only an administrator can create an active student account."""
+        self.client.force_authenticate(user=self.student)
+        forbidden = self.client.post('/api/admin/students/', {
             'fullName': 'Amina Duale',
             'email': 'amina.duale@example.com',
-            'password': 'StrongPassword123!'
-            , 'academicLevel': 'FORM_1'
+            'username': 'amina.duale',
+            'password': 'StrongPassword123!',
+            'academicLevel': 'FORM_1',
+        })
+        self.assertEqual(forbidden.status_code, status.HTTP_403_FORBIDDEN)
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post('/api/admin/students/', {
+            'fullName': 'Amina Duale',
+            'email': 'amina.duale@example.com',
+            'username': 'amina.duale',
+            'password': 'StrongPassword123!',
+            'academicLevel': 'FORM_1',
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(User.objects.filter(email='amina.duale@example.com').exists())

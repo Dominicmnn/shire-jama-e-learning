@@ -38,7 +38,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const [quizOpensAt, setQuizOpensAt] = useState('');
   const [quizClosesAt, setQuizClosesAt] = useState('');
   const [quizResultsVisible, setQuizResultsVisible] = useState(false);
-  const [quizQuestions, setQuizQuestions] = useState<Array<{ prompt: string; choices: Array<{ text: string; isCorrect: boolean }> }>>([]);
+  const [quizQuestions, setQuizQuestions] = useState<Array<{ prompt: string; questionType: Question['questionType']; choices: Array<{ text: string; isCorrect: boolean }> }>>([]);
 
   // Material Upload Form State
   const [materialTitle, setMaterialTitle] = useState('');
@@ -74,7 +74,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     if (!courseTitle.trim() || courseAcademicLevels.length === 0) return;
 
     try {
-      const newCourse = await api.createCourse(courseTitle.trim(), courseDesc.trim(), courseAcademicLevels);
+      const newCourse = await api.createCourse(courseTitle.trim(), courseDesc.trim(), courseAcademicLevels, instructor);
       onCreateCourse(newCourse);
     } catch {
       // Fallback local creation
@@ -195,12 +195,13 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     e.preventDefault();
     if (!selectedCourseForQuiz || !quizChapterId || !quizTitle.trim() || (quizIsTimed && Number(quizTimeLimit) < 1) || (Boolean(quizOpensAt) !== Boolean(quizClosesAt))) return;
     if (quizOpensAt && quizClosesAt && quizOpensAt === quizClosesAt) return;
-    if (quizQuestions.some((question) => !question.prompt.trim() || question.choices.length < 2 || question.choices.some((choice) => !choice.text.trim()) || question.choices.filter((choice) => choice.isCorrect).length !== 1)) return;
+    if (quizQuestions.some((question) => !question.prompt.trim() || ((question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && (question.choices.length < 2 || question.choices.some((choice) => !choice.text.trim()) || question.choices.filter((choice) => choice.isCorrect).length !== 1)))) return;
     const targetCourse = courses.find((course) => course.id === selectedCourseForQuiz);
     if (!targetCourse) return;
     const questions: Question[] = quizQuestions.map((question, questionIndex) => ({
       id: `question-${Date.now()}-${questionIndex}`,
       prompt: question.prompt.trim(),
+      questionType: question.questionType || 'MULTIPLE_CHOICE',
       choices: question.choices.map((choice, choiceIndex): Choice => ({
         id: `choice-${Date.now()}-${questionIndex}-${choiceIndex}`,
         text: choice.text.trim(),
@@ -226,7 +227,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
       <div className="bg-linear-to-r from-amber-900 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-800 flex justify-between items-center">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-amber-300 uppercase tracking-wider mb-1">
-            <span>Faculty Instructor Portal</span>
+            <span>Teacher Portal</span>
             <span>&bull;</span>
             <span>{instructor.instructorCode || 'INST-2024'}</span>
           </div>
@@ -457,8 +458,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={quizResultsVisible} onChange={(e) => setQuizResultsVisible(e.target.checked)} /> Show automatically marked results to students</label>
               <div className="space-y-3 border-t border-slate-200 pt-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-slate-800">Multiple-choice questions</h4>
-                  <button type="button" onClick={() => setQuizQuestions((current) => [...current, { prompt: '', choices: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] }])} className="px-2.5 py-1.5 bg-blue-50 text-blue-800 text-xs font-bold rounded">Add Question</button>
+                  <h4 className="text-sm font-bold text-slate-800">Questions</h4>
+                  <button type="button" onClick={() => setQuizQuestions((current) => [...current, { prompt: '', questionType: 'MULTIPLE_CHOICE', choices: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] }])} className="px-2.5 py-1.5 bg-blue-50 text-blue-800 text-xs font-bold rounded">Add Question</button>
                 </div>
                 {quizQuestions.map((question, questionIndex) => (
                   <div key={questionIndex} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
@@ -466,7 +467,10 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                       <input required value={question.prompt} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, prompt: e.target.value } : item))} placeholder={`Question ${questionIndex + 1}`} className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm" />
                       <button type="button" onClick={() => setQuizQuestions((current) => current.filter((_, index) => index !== questionIndex))} className="px-2 text-rose-600 text-xs font-bold">Remove</button>
                     </div>
-                    {question.choices.map((choice, choiceIndex) => (
+                    <select value={question.questionType} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, questionType: e.target.value as Question['questionType'], choices: e.target.value === 'MULTIPLE_CHOICE' ? [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] : e.target.value === 'TRUE_FALSE' ? [{ text: 'True', isCorrect: true }, { text: 'False', isCorrect: false }] : [] } : item))} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm">
+                      <option value="MULTIPLE_CHOICE">Multiple choice</option><option value="TRUE_FALSE">True or false</option><option value="SHORT_ANSWER">Short answer</option><option value="LONG_ANSWER">Long answer</option><option value="FILE_UPLOAD">File upload (image, PDF, Word)</option>
+                    </select>
+                    {(question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && question.choices.map((choice, choiceIndex) => (
                       <div key={choiceIndex} className="flex items-center gap-2 pl-3">
                         <input type="radio" name={`correct-${questionIndex}`} checked={choice.isCorrect} onChange={() => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, choices: item.choices.map((option, optionIndex) => ({ ...option, isCorrect: optionIndex === choiceIndex })) } : item))} title="Correct answer" />
                         <input required value={choice.text} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, choices: item.choices.map((option, optionIndex) => optionIndex === choiceIndex ? { ...option, text: e.target.value } : option) } : item))} placeholder={`Option ${choiceIndex + 1}`} className="flex-1 px-3 py-1.5 border border-slate-300 rounded-md text-sm" />
