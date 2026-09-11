@@ -374,6 +374,7 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
     studentName = serializers.SerializerMethodField()
     quizTitle = serializers.CharField(source='quiz.title', read_only=True)
     courseTitle = serializers.CharField(source='quiz.course.title', read_only=True)
+    totalQuestions = serializers.IntegerField(source='total_questions', read_only=True)
     completedAt = serializers.DateTimeField(source='completed_at', format='%Y-%m-%d %H:%M', read_only=True)
     answerReview = serializers.SerializerMethodField()
     isGraded = serializers.SerializerMethodField()
@@ -390,7 +391,7 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             'quizTitle',
             'courseTitle',
             'score',
-            'total_questions',
+            'totalQuestions',
             'percentage',
             'completedAt',
             'answerReview',

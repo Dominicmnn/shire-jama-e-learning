@@ -142,43 +142,15 @@ export const api = {
   },
 
   createCourse: async (title: string, description: string, academicLevels: AcademicLevel[], instructor: User) => {
-    ensureTokens();
-    const newCourse: Course = {
-      id: `c-${Date.now()}`,
-      title: title.trim(),
-      description: description.trim(),
-      instructorId: instructor.id,
-      instructorName: instructor.fullName,
-      createdAt: new Date().toISOString().split('T')[0],
-      updatedAt: new Date().toISOString().split('T')[0],
-      materials: [],
-      quizzes: [],
-      chapters: [],
-      academicLevels,
-    };
-    return Promise.resolve(newCourse);
+    return apiRequest('/courses/', { method: 'POST', body: JSON.stringify({ title: title.trim(), description: description.trim(), academicLevels }) });
   },
 
   uploadMaterial: async (courseId: string, formData: FormData) => {
-    ensureTokens();
-    const title = String(formData.get('title') ?? 'Uploaded material');
-    const file = formData.get('file');
-    const fileUrl = typeof file === 'string' ? file : `https://example.com/${title.replace(/\s+/g, '-').toLowerCase()}`;
-    return Promise.resolve({
-      id: `m-${Date.now()}`,
-      courseId,
-      title,
-      type: String(formData.get('type') ?? 'PDF'),
-      fileName: file && typeof file !== 'string' ? (file as File).name : 'uploaded-file',
-      fileUrl,
-      chapterId: String(formData.get('chapterId') ?? ''),
-      allowDownload: String(formData.get('allowDownload') ?? 'false') === 'true',
-    });
+    return apiRequest(`/courses/${courseId}/materials/`, { method: 'POST', body: formData });
   },
 
   createChapter: async (courseId: string, title: string): Promise<Chapter> => {
-    ensureTokens();
-    return Promise.resolve({ id: `ch-${Date.now()}`, courseId, title: title.trim(), order: Date.now(), materials: [], quizzes: [] });
+    return apiRequest(`/courses/${courseId}/chapters/`, { method: 'POST', body: JSON.stringify({ title: title.trim() }) });
   },
 
   createQuiz: async (

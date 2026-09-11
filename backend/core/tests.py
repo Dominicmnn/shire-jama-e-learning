@@ -315,7 +315,8 @@ class ShireJamaLmsTests(TestCase):
 
         student_results = self.client.get('/api/quiz-results/')
         self.assertEqual(student_results.status_code, status.HTTP_200_OK)
-        self.assertEqual(student_results.data, [])
+        self.assertEqual(len(student_results.data), 1)
+        self.assertTrue(student_results.data[0]['isGraded'])
 
         self.client.force_authenticate(user=self.instructor)
         instructor_results = self.client.get('/api/quiz-results/')

@@ -479,6 +479,7 @@ class QuizSubmitView(APIView):
             'completedAt': attempt.completed_at.strftime('%Y-%m-%d %H:%M'),
             'isGraded': objective_questions == total_questions,
             'objectiveQuestions': objective_questions,
+            'totalQuestions': total_questions,
         }
         if quiz.results_visible_to_students:
             response_data.update({
@@ -572,7 +573,7 @@ class QuizResultsOverviewView(APIView):
             )
         else:
             attempts = QuizAttempt.objects.select_related('quiz', 'quiz__course', 'student').filter(
-                Q(student=user) & (Q(quiz__results_visible_to_students=True) | Q(manual_score__isnull=False)),
+                student=user,
             )
 
         serializer = QuizAttemptSerializer(attempts, many=True, context={'request': request})
