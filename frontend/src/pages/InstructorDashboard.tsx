@@ -223,6 +223,19 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     setIsCreatingQuiz(false);
   };
 
+  const addQuizQuestion = (questionType: Question['questionType']) => {
+    setQuizQuestions((current) => [...current, {
+      prompt: '',
+      questionType,
+      questionFile: null,
+      choices: questionType === 'MULTIPLE_CHOICE'
+        ? [{ text: '', isCorrect: true }, { text: '', isCorrect: false }]
+        : questionType === 'TRUE_FALSE'
+          ? [{ text: 'True', isCorrect: true }, { text: 'False', isCorrect: false }]
+          : [],
+    }]);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header Banner */}
@@ -461,7 +474,23 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <div className="space-y-3 border-t border-slate-200 pt-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-slate-800">Questions</h4>
-                  <button type="button" onClick={() => setQuizQuestions((current) => [...current, { prompt: '', questionType: 'MULTIPLE_CHOICE', questionFile: null, choices: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] }])} className="px-2.5 py-1.5 bg-blue-50 text-blue-800 text-xs font-bold rounded">Add Question</button>
+                  <button type="button" onClick={() => addQuizQuestion('MULTIPLE_CHOICE')} className="px-2.5 py-1.5 bg-blue-50 text-blue-800 text-xs font-bold rounded">Add Question</button>
+                </div>
+                <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">Choose question type</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                    {([
+                      ['MULTIPLE_CHOICE', 'Multiple choice'],
+                      ['TRUE_FALSE', 'True / false'],
+                      ['SHORT_ANSWER', 'Short answer'],
+                      ['LONG_ANSWER', 'Long answer'],
+                      ['FILE_UPLOAD', 'File upload'],
+                    ] as const).map(([type, label]) => (
+                      <button key={type} type="button" onClick={() => addQuizQuestion(type)} className="min-h-10 rounded-md border border-blue-200 bg-white px-2 py-1.5 text-xs font-semibold text-blue-800 hover:border-blue-500 hover:bg-blue-100">
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {quizQuestions.map((question, questionIndex) => (
                   <div key={questionIndex} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
