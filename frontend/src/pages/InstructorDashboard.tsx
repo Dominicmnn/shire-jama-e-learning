@@ -469,9 +469,27 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                       <input value={question.prompt} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, prompt: e.target.value } : item))} placeholder={`Question ${questionIndex + 1} text (optional when attaching a document)`} className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm" />
                       <button type="button" onClick={() => setQuizQuestions((current) => current.filter((_, index) => index !== questionIndex))} className="px-2 text-rose-600 text-xs font-bold">Remove</button>
                     </div>
-                    <select value={question.questionType} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, questionType: e.target.value as Question['questionType'], choices: e.target.value === 'MULTIPLE_CHOICE' ? [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] : e.target.value === 'TRUE_FALSE' ? [{ text: 'True', isCorrect: true }, { text: 'False', isCorrect: false }] : [] } : item))} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm">
-                      <option value="MULTIPLE_CHOICE">Multiple choice</option><option value="TRUE_FALSE">True or false</option><option value="SHORT_ANSWER">Short answer</option><option value="LONG_ANSWER">Long answer</option><option value="FILE_UPLOAD">File upload (image, PDF, Word)</option>
-                    </select>
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-600">Question format</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                        {([
+                          ['MULTIPLE_CHOICE', 'Multiple choice'],
+                          ['TRUE_FALSE', 'True / false'],
+                          ['SHORT_ANSWER', 'Short answer'],
+                          ['LONG_ANSWER', 'Long answer'],
+                          ['FILE_UPLOAD', 'File upload'],
+                        ] as const).map(([type, label]) => (
+                          <button
+                            key={type}
+                            type="button"
+                            onClick={() => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, questionType: type, choices: type === 'MULTIPLE_CHOICE' ? [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] : type === 'TRUE_FALSE' ? [{ text: 'True', isCorrect: true }, { text: 'False', isCorrect: false }] : [] } : item))}
+                            className={`min-h-10 rounded-md border px-2 py-1.5 text-xs font-semibold transition-colors ${question.questionType === type ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-blue-400 hover:bg-blue-50'}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     {question.questionType !== 'MULTIPLE_CHOICE' && question.questionType !== 'TRUE_FALSE' && <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-1">Question document (optional PDF or Word file)</label>
                       <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, questionFile: e.target.files?.[0] || null } : item))} className="w-full text-xs" />
