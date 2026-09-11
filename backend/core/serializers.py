@@ -221,10 +221,18 @@ class ChoiceSerializer(serializers.ModelSerializer):
 
 class QuestionSerializer(serializers.ModelSerializer):
     choices = ChoiceSerializer(many=True, read_only=True)
+    questionType = serializers.CharField(source='question_type', read_only=True)
+    questionFileUrl = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
-        fields = ['id', 'prompt', 'order', 'question_type', 'choices']
+        fields = ['id', 'prompt', 'order', 'questionType', 'questionFileUrl', 'choices']
+
+    def get_questionFileUrl(self, obj):
+        if not obj.question_file:
+            return None
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.question_file.url) if request else obj.question_file.url
 
 
 class QuizSerializer(serializers.ModelSerializer):

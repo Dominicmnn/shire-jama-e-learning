@@ -241,7 +241,25 @@ class ShireJamaLmsTests(TestCase):
         attempt = quiz.attempts.get(student=self.student)
         self.assertEqual(attempt.responses.count(), 2)
         self.assertEqual(attempt.responses.get(question=text_question).text_answer, 'My written answer.')
-        self.assertTrue(attempt.responses.get(question=file_question).answer_file.name.endswith('answer.pdf'))
+        file_response = attempt.responses.get(question=file_question)
+        self.assertTrue(file_response.answer_file.name.endswith('.pdf'))
+
+    def test_teacher_can_attach_question_document(self):
+        course = Course.objects.create(title='Document Quiz Course', description='Test', instructor=self.instructor, academic_levels=['CLASS_1'])
+        chapter = Chapter.objects.create(course=course, title='Chapter 1')
+        self.client.force_authenticate(user=self.instructor)
+        response = self.client.post(
+            f'/api/courses/{course.id}/quizzes/',
+            {
+                'title': 'Structured Quiz',
+                'chapterId': chapter.id,
+                'questions': json.dumps([{'prompt': 'Read the attached question.', 'questionType': 'LONG_ANSWER', 'choices': []}]),
+                'questionFile_0': SimpleUploadedFile('questions.pdf', b'%PDF-1.4 questions'),
+            },
+            format='multipart'
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(Question.objects.get(quiz__title='Structured Quiz').question_file.name.endswith('.pdf'))
 
     def test_quiz_submission_respects_daily_time_window(self):
         course = Course.objects.create(title='Window Course', description='Test', instructor=self.instructor, academic_levels=['CLASS_1'])

@@ -154,6 +154,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                       </span>
                       <span>{q.prompt}</span>
                     </p>
+                    {q.questionFileUrl && <a href={q.questionFileUrl} target="_blank" rel="noreferrer" className="ml-8 inline-flex text-xs font-semibold text-blue-700 hover:text-blue-900 underline">Open instructor question document{q.questionFileName ? `: ${q.questionFileName}` : ''}</a>}
 
                     {q.questionType === 'SHORT_ANSWER' && <input value={selectedAnswers[q.id] || ''} onChange={(e) => handleSelect(q.id, e.target.value)} placeholder="Enter a short answer" className="ml-8 w-[calc(100%-2rem)] px-3 py-2 border border-slate-300 rounded-md text-sm" />}
                     {q.questionType === 'LONG_ANSWER' && <textarea value={selectedAnswers[q.id] || ''} onChange={(e) => handleSelect(q.id, e.target.value)} placeholder="Write your answer" rows={4} className="ml-8 w-[calc(100%-2rem)] px-3 py-2 border border-slate-300 rounded-md text-sm" />}

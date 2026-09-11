@@ -38,7 +38,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const [quizOpensAt, setQuizOpensAt] = useState('');
   const [quizClosesAt, setQuizClosesAt] = useState('');
   const [quizResultsVisible, setQuizResultsVisible] = useState(false);
-  const [quizQuestions, setQuizQuestions] = useState<Array<{ prompt: string; questionType: Question['questionType']; choices: Array<{ text: string; isCorrect: boolean }> }>>([]);
+  const [quizQuestions, setQuizQuestions] = useState<Array<{ prompt: string; questionType: Question['questionType']; questionFile: File | null; choices: Array<{ text: string; isCorrect: boolean }> }>>([]);
 
   // Material Upload Form State
   const [materialTitle, setMaterialTitle] = useState('');
@@ -195,13 +195,15 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     e.preventDefault();
     if (!selectedCourseForQuiz || !quizChapterId || !quizTitle.trim() || (quizIsTimed && Number(quizTimeLimit) < 1) || (Boolean(quizOpensAt) !== Boolean(quizClosesAt))) return;
     if (quizOpensAt && quizClosesAt && quizOpensAt === quizClosesAt) return;
-    if (quizQuestions.some((question) => !question.prompt.trim() || ((question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && (question.choices.length < 2 || question.choices.some((choice) => !choice.text.trim()) || question.choices.filter((choice) => choice.isCorrect).length !== 1)))) return;
+    if (quizQuestions.some((question) => (!question.prompt.trim() && !question.questionFile) || ((question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && (question.choices.length < 2 || question.choices.some((choice) => !choice.text.trim()) || question.choices.filter((choice) => choice.isCorrect).length !== 1)))) return;
     const targetCourse = courses.find((course) => course.id === selectedCourseForQuiz);
     if (!targetCourse) return;
     const questions: Question[] = quizQuestions.map((question, questionIndex) => ({
       id: `question-${Date.now()}-${questionIndex}`,
       prompt: question.prompt.trim(),
       questionType: question.questionType || 'MULTIPLE_CHOICE',
+      questionFileUrl: question.questionFile ? URL.createObjectURL(question.questionFile) : null,
+      questionFileName: question.questionFile?.name,
       choices: question.choices.map((choice, choiceIndex): Choice => ({
         id: `choice-${Date.now()}-${questionIndex}-${choiceIndex}`,
         text: choice.text.trim(),
@@ -459,17 +461,22 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
               <div className="space-y-3 border-t border-slate-200 pt-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-slate-800">Questions</h4>
-                  <button type="button" onClick={() => setQuizQuestions((current) => [...current, { prompt: '', questionType: 'MULTIPLE_CHOICE', choices: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] }])} className="px-2.5 py-1.5 bg-blue-50 text-blue-800 text-xs font-bold rounded">Add Question</button>
+                  <button type="button" onClick={() => setQuizQuestions((current) => [...current, { prompt: '', questionType: 'MULTIPLE_CHOICE', questionFile: null, choices: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] }])} className="px-2.5 py-1.5 bg-blue-50 text-blue-800 text-xs font-bold rounded">Add Question</button>
                 </div>
                 {quizQuestions.map((question, questionIndex) => (
                   <div key={questionIndex} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
                     <div className="flex gap-2">
-                      <input required value={question.prompt} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, prompt: e.target.value } : item))} placeholder={`Question ${questionIndex + 1}`} className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm" />
+                      <input value={question.prompt} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, prompt: e.target.value } : item))} placeholder={`Question ${questionIndex + 1} text (optional when attaching a document)`} className="flex-1 px-3 py-2 border border-slate-300 rounded-md text-sm" />
                       <button type="button" onClick={() => setQuizQuestions((current) => current.filter((_, index) => index !== questionIndex))} className="px-2 text-rose-600 text-xs font-bold">Remove</button>
                     </div>
                     <select value={question.questionType} onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, questionType: e.target.value as Question['questionType'], choices: e.target.value === 'MULTIPLE_CHOICE' ? [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] : e.target.value === 'TRUE_FALSE' ? [{ text: 'True', isCorrect: true }, { text: 'False', isCorrect: false }] : [] } : item))} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm">
                       <option value="MULTIPLE_CHOICE">Multiple choice</option><option value="TRUE_FALSE">True or false</option><option value="SHORT_ANSWER">Short answer</option><option value="LONG_ANSWER">Long answer</option><option value="FILE_UPLOAD">File upload (image, PDF, Word)</option>
                     </select>
+                    {question.questionType !== 'MULTIPLE_CHOICE' && question.questionType !== 'TRUE_FALSE' && <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Question document (optional PDF or Word file)</label>
+                      <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, questionFile: e.target.files?.[0] || null } : item))} className="w-full text-xs" />
+                      {question.questionFile && <p className="mt-1 text-xs text-emerald-700">Attached: {question.questionFile.name}</p>}
+                    </div>}
                     {(question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && question.choices.map((choice, choiceIndex) => (
                       <div key={choiceIndex} className="flex items-center gap-2 pl-3">
                         <input type="radio" name={`correct-${questionIndex}`} checked={choice.isCorrect} onChange={() => setQuizQuestions((current) => current.map((item, index) => index === questionIndex ? { ...item, choices: item.choices.map((option, optionIndex) => ({ ...option, isCorrect: optionIndex === choiceIndex })) } : item))} title="Correct answer" />

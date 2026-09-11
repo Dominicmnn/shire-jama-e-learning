@@ -346,6 +346,13 @@ class QuizCreateView(APIView):
         if opens_at and closes_at == opens_at:
             return Response({'detail': 'Opening and closing times must be different.'}, status=status.HTTP_400_BAD_REQUEST)
         questions_data = request.data.get('questions', [])
+        if isinstance(questions_data, str):
+            try:
+                questions_data = json.loads(questions_data)
+            except json.JSONDecodeError:
+                return Response({'questions': ['Questions must be valid JSON.']}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(questions_data, list):
+            return Response({'questions': ['Questions must be a list.']}, status=status.HTTP_400_BAD_REQUEST)
         chapter = None
         chapter_id = request.data.get('chapterId')
         if chapter_id:
@@ -372,13 +379,18 @@ class QuizCreateView(APIView):
 
             for idx, q_data in enumerate(questions_data, start=1):
                 prompt = q_data.get('prompt', '').strip()
-                if not prompt:
+                question_file = request.FILES.get(f'questionFile_{idx - 1}')
+                if not prompt and not question_file:
                     continue
                 question_type = q_data.get('questionType', Question.QuestionType.MULTIPLE_CHOICE)
                 valid_types = {value for value, _ in Question.QuestionType.choices}
                 if question_type not in valid_types:
                     raise ValueError('Invalid question type.')
-                question = Question.objects.create(quiz=quiz, prompt=prompt, order=idx, question_type=question_type)
+                if question_file and Path(question_file.name).suffix.lower() not in {'.pdf', '.doc', '.docx'}:
+                    return Response({'detail': 'Question documents must be PDF or Word files.'}, status=status.HTTP_400_BAD_REQUEST)
+                if not prompt:
+                    prompt = f'Complete the attached question document: {question_file.name}'
+                question = Question.objects.create(quiz=quiz, prompt=prompt, order=idx, question_type=question_type, question_file=question_file)
                 for c_data in q_data.get('choices', []):
                     text = c_data.get('text', '').strip()
                     if text:

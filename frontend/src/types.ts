@@ -47,6 +47,8 @@ export interface Question {
   id: string;
   prompt: string;
   questionType?: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'LONG_ANSWER' | 'FILE_UPLOAD';
+  questionFileUrl?: string | null;
+  questionFileName?: string;
   choices: Choice[];
 }
 

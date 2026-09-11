@@ -181,6 +181,7 @@ class Question(models.Model):
     )
     prompt = models.TextField()
     question_type = models.CharField(max_length=20, choices=QuestionType.choices, default=QuestionType.MULTIPLE_CHOICE)
+    question_file = models.FileField(upload_to='quiz_questions/%Y/%m/', blank=True, null=True)
     order = models.PositiveIntegerField(default=1)
 
     class Meta:
