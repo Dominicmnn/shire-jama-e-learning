@@ -572,8 +572,7 @@ class QuizResultsOverviewView(APIView):
             )
         else:
             attempts = QuizAttempt.objects.select_related('quiz', 'quiz__course', 'student').filter(
-                student=user,
-                quiz__results_visible_to_students=True,
+                Q(student=user) & (Q(quiz__results_visible_to_students=True) | Q(manual_score__isnull=False)),
             )
 
         serializer = QuizAttemptSerializer(attempts, many=True, context={'request': request})

@@ -278,6 +278,10 @@ class ShireJamaLmsTests(TestCase):
         self.assertEqual(grade_response.status_code, status.HTTP_200_OK)
         self.assertEqual(grade_response.data['finalScore'], 85)
         self.assertTrue(grade_response.data['isGraded'])
+        self.client.force_authenticate(user=self.student)
+        student_results = self.client.get('/api/quiz-results/')
+        self.assertEqual(student_results.status_code, status.HTTP_200_OK)
+        self.assertEqual(student_results.data[0]['finalScore'], 85)
 
     def test_quiz_submission_respects_daily_time_window(self):
         course = Course.objects.create(title='Window Course', description='Test', instructor=self.instructor, academic_levels=['CLASS_1'])

@@ -37,6 +37,11 @@ export default function App() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    api.getQuizResults().then(setAttempts).catch(() => {});
+  }, [currentUser]);
+
   // Authentication Handlers
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
@@ -48,7 +53,8 @@ export default function App() {
   };
 
   const handleQuizSubmit = (attempt) => {
-    setAttempts((prev) => [attempt, ...prev]);
+    setAttempts((prev) => [attempt, ...prev.filter((item) => item.id !== attempt.id)]);
+    api.getQuizResults().then(setAttempts).catch(() => {});
   };
 
   const handleUpdateAttempt = (updatedAttempt) => {

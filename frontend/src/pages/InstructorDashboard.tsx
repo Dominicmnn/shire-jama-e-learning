@@ -215,6 +215,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     if (quizQuestions.some((question) => (!question.prompt.trim() && !question.questionFile) || ((question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && (question.choices.length < 2 || question.choices.some((choice) => !choice.text.trim()) || question.choices.filter((choice) => choice.isCorrect).length !== 1)))) return;
     const targetCourse = courses.find((course) => course.id === selectedCourseForQuiz);
     if (!targetCourse) return;
+    const questionFiles: Record<string, File> = {};
     const questions: Question[] = quizQuestions.map((question, questionIndex) => ({
       id: `question-${Date.now()}-${questionIndex}`,
       prompt: question.prompt.trim(),
@@ -227,7 +228,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         isCorrect: choice.isCorrect,
       })),
     }));
-    const quiz = await api.createQuiz(selectedCourseForQuiz, quizChapterId, quizTitle, quizIsTimed, Number(quizTimeLimit), questions, quizResultsVisible, quizOpensAt || null, quizClosesAt || null);
+    quizQuestions.forEach((question, index) => { if (question.questionFile) questionFiles[String(index)] = question.questionFile; });
+    const quiz = await api.createQuiz(selectedCourseForQuiz, quizChapterId, quizTitle, quizIsTimed, Number(quizTimeLimit), questions, quizResultsVisible, quizOpensAt || null, quizClosesAt || null, questionFiles);
     const updatedChapters = targetCourse.chapters.map((chapter) => chapter.id === quizChapterId ? { ...chapter, quizzes: [...chapter.quizzes, quiz] } : chapter);
     onUpdateCourse({ ...targetCourse, chapters: updatedChapters, quizzes: [...targetCourse.quizzes, quiz] });
     setQuizTitle('');

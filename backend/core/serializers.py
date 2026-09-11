@@ -370,6 +370,7 @@ class CourseListSerializer(serializers.ModelSerializer):
 # ----------------------------------------------------------------------
 
 class QuizAttemptSerializer(serializers.ModelSerializer):
+    quizId = serializers.IntegerField(source='quiz_id', read_only=True)
     studentName = serializers.SerializerMethodField()
     quizTitle = serializers.CharField(source='quiz.title', read_only=True)
     courseTitle = serializers.CharField(source='quiz.course.title', read_only=True)
@@ -384,6 +385,7 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
         model = QuizAttempt
         fields = [
             'id',
+            'quizId',
             'studentName',
             'quizTitle',
             'courseTitle',
