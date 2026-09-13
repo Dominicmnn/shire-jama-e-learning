@@ -6,7 +6,8 @@ const tokenStorageKey = 'shire-jama-auth-tokens';
 const progressStorageKey = 'shire-jama-chapter-progress';
 const usersStorageKey = 'shire-jama-users';
 const createdQuizzesStorageKey = 'shire-jama-created-quizzes';
-const apiBaseUrl = ((globalThis as any).__VITE_API_URL__) || 'http://localhost:8000/api';
+// @ts-ignore
+const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api') as string;
 
 const getAccessToken = () => {
   if (typeof window === 'undefined') return '';
