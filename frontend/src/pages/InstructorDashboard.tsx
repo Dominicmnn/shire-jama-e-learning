@@ -94,9 +94,13 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     if (!courseTitle.trim() || courseAcademicLevels.length === 0) return;
 
     try {
+      console.log('Creating course on backend...');
       const newCourse = await api.createCourse(courseTitle.trim(), courseDesc.trim(), courseAcademicLevels, instructor);
+      console.log('Course created successfully:', newCourse);
       onCreateCourse(newCourse);
-    } catch {
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Course creation failed:', errorMsg, error);
       // Fallback local creation
       const localCourse: Course = {
         id: `c-${Date.now()}`,
@@ -111,6 +115,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         chapters: [],
         academicLevels: courseAcademicLevels,
       };
+      console.warn('Using local fallback for course creation. Backend connection may be down. File uploads will not work for this course.');
       onCreateCourse(localCourse);
     }
 
@@ -128,6 +133,12 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
       return;
     }
 
+    // Check if course ID is valid (numeric = exists on backend, string = local only)
+    if (isNaN(Number(selectedCourseForUpload))) {
+      setUploadError('This course was created locally and does not exist on the server. Please ensure the backend is running and try creating the course again.');
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append('title', materialTitle.trim());
@@ -138,6 +149,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     formData.append('allowDownload', String(allowDownload));
 
     try {
+      console.log('Uploading material to course:', selectedCourseForUpload);
       const res = await api.uploadMaterial(selectedCourseForUpload, formData);
       const targetCourse = courses.find((c) => c.id === selectedCourseForUpload);
       if (targetCourse) {
@@ -162,31 +174,10 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         });
       }
       setUploadSuccess('Material upload complete.');
-    } catch {
-      // Fallback local memory preview
-      const targetCourse = courses.find((c) => c.id === selectedCourseForUpload);
-      if (targetCourse) {
-        const newMat: LearningMaterial = {
-          id: `m-${Date.now()}`,
-          courseId: selectedCourseForUpload,
-          title: materialTitle.trim(),
-          type: materialType,
-          fileName: selectedFile.name,
-          fileSize: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
-          fileUrl: URL.createObjectURL(selectedFile),
-          uploadDate: new Date().toISOString().split('T')[0],
-          allowDownload,
-        };
-        onUpdateCourse({
-          ...targetCourse,
-          chapters: targetCourse.chapters.map((chapter) =>
-            chapter.id === selectedChapterId
-              ? { ...chapter, materials: [...chapter.materials, newMat] }
-              : chapter
-          ),
-        });
-      }
-      setUploadSuccess('Material upload complete.');
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Material upload failed:', errorMsg, error);
+      setUploadError(`Upload failed: ${errorMsg}`);
     }
 
     setUploading(false);

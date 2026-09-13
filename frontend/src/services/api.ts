@@ -147,7 +147,16 @@ export const api = {
   },
 
   uploadMaterial: async (courseId: string, formData: FormData) => {
-    return apiRequest(`/courses/${courseId}/materials/`, { method: 'POST', body: formData });
+    console.log('Uploading material to course:', courseId);
+    if (!courseId || isNaN(Number(courseId))) {
+      return Promise.reject(new Error('Invalid course ID. Please ensure the course is saved on the server before uploading materials.'));
+    }
+    try {
+      return await apiRequest(`/courses/${courseId}/materials/`, { method: 'POST', body: formData });
+    } catch (error) {
+      console.error('Material upload failed:', error);
+      throw error;
+    }
   },
 
   createChapter: async (courseId: string, title: string): Promise<Chapter> => {
