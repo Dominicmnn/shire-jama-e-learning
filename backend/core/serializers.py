@@ -270,13 +270,17 @@ class QuizSerializer(serializers.ModelSerializer):
 
 
 class ChapterSerializer(serializers.ModelSerializer):
+    courseId = serializers.SerializerMethodField()
     materials = serializers.SerializerMethodField()
     quizzes = serializers.SerializerMethodField()
     completed = serializers.SerializerMethodField()
 
     class Meta:
         model = Chapter
-        fields = ['id', 'title', 'order', 'materials', 'quizzes', 'completed']
+        fields = ['id', 'courseId', 'title', 'order', 'materials', 'quizzes', 'completed']
+
+    def get_courseId(self, obj):
+        return obj.course.id
 
     def get_materials(self, obj):
         request = self.context.get('request')
