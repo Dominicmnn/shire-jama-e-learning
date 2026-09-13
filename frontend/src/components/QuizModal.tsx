@@ -212,27 +212,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 <div className="h-8 w-px bg-slate-300" />
                 <div>
                   <p className="text-xs text-slate-500 font-semibold uppercase">Percentage</p>
-                  <p
-                    className={`text-2xl font-black ${
-                      (attemptResult?.percentage ?? 0) >= quiz.passingScorePercent
-                        ? 'text-emerald-600'
-                        : 'text-amber-600'
-                    }`}
-                  >
+                  <p className="text-2xl font-black text-blue-600">
                     {attemptResult?.percentage}%
-                  </p>
-                </div>
-                <div className="h-8 w-px bg-slate-300" />
-                <div>
-                  <p className="text-xs text-slate-500 font-semibold uppercase">Status</p>
-                  <p
-                    className={`text-sm font-bold uppercase tracking-wider ${
-                      (attemptResult?.percentage ?? 0) >= quiz.passingScorePercent
-                        ? 'text-emerald-600'
-                        : 'text-rose-600'
-                    }`}
-                  >
-                    {(attemptResult?.percentage ?? 0) >= quiz.passingScorePercent ? 'Passed' : 'Needs Review'}
                   </p>
                 </div>
               </div>}
@@ -243,11 +224,12 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                   {attemptResult.answerReview.map((review, index) => (
                     <div key={review.questionId} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                       <p className="text-sm font-semibold text-slate-900">{index + 1}. {review.question}</p>
-                      <p className="mt-1 text-xs text-slate-600">Your answer: <span className="font-semibold">{review.selectedAnswer || 'No answer'}</span></p>
-                      <p className="text-xs text-emerald-700">Correct answer: <span className="font-semibold">{review.correctAnswer || 'Not set'}</span></p>
-                      <p className={`mt-1 text-xs font-bold ${review.isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      <p className="mt-1 text-xs text-slate-600">Your answer: <span className="font-semibold">{review.selectedAnswer || review.textAnswer || 'No answer'}</span></p>
+                      {review.answerFile && <a href={review.answerFile} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-bold text-blue-700 underline">View your uploaded file</a>}
+                      {review.correctAnswer && <p className="text-xs text-emerald-700">Correct answer: <span className="font-semibold">{review.correctAnswer}</span></p>}
+                      {review.isCorrect !== undefined && <p className={`mt-1 text-xs font-bold ${review.isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
                         {review.isCorrect ? 'Correct' : 'Incorrect'}
-                      </p>
+                      </p>}
                     </div>
                   ))}
                 </div>

@@ -54,6 +54,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const [gradingAttemptId, setGradingAttemptId] = useState<string | null>(null);
   const [gradeValue, setGradeValue] = useState('');
   const [gradeFeedback, setGradeFeedback] = useState('');
+  const [creationError, setCreationError] = useState('');
 
   // Filter courses authored by this instructor
   const myCourses = courses.filter((c) => c.instructorId === instructor.id || c.instructorName === instructor.fullName);
@@ -198,14 +199,19 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const handleCreateChapterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourseForChapter || !chapterTitle.trim()) return;
+    setCreationError('');
     const targetCourse = courses.find((course) => course.id === selectedCourseForChapter);
     if (!targetCourse) return;
-    const chapter = await api.createChapter(selectedCourseForChapter, chapterTitle);
-    const newChapter: Chapter = { ...chapter, order: targetCourse.chapters.length + 1 };
-    onUpdateCourse({ ...targetCourse, chapters: [...targetCourse.chapters, newChapter] });
-    setChapterTitle('');
-    setSelectedCourseForChapter(null);
-    setIsCreatingChapter(false);
+    try {
+      const chapter = await api.createChapter(selectedCourseForChapter, chapterTitle);
+      const newChapter: Chapter = { ...chapter, order: targetCourse.chapters.length + 1 };
+      onUpdateCourse({ ...targetCourse, chapters: [...targetCourse.chapters, newChapter] });
+      setChapterTitle('');
+      setSelectedCourseForChapter(null);
+      setIsCreatingChapter(false);
+    } catch (error) {
+      setCreationError(`Failed to create chapter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleCreateQuizSubmit = async (e: React.FormEvent) => {
@@ -213,33 +219,38 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     if (!selectedCourseForQuiz || !quizChapterId || !quizTitle.trim() || (quizIsTimed && Number(quizTimeLimit) < 1) || (Boolean(quizOpensAt) !== Boolean(quizClosesAt))) return;
     if (quizOpensAt && quizClosesAt && quizOpensAt === quizClosesAt) return;
     if (quizQuestions.some((question) => (!question.prompt.trim() && !question.questionFile) || ((question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && (question.choices.length < 2 || question.choices.some((choice) => !choice.text.trim()) || question.choices.filter((choice) => choice.isCorrect).length !== 1)))) return;
+    setCreationError('');
     const targetCourse = courses.find((course) => course.id === selectedCourseForQuiz);
     if (!targetCourse) return;
-    const questionFiles: Record<string, File> = {};
-    const questions: Question[] = quizQuestions.map((question, questionIndex) => ({
-      id: `question-${Date.now()}-${questionIndex}`,
-      prompt: question.prompt.trim(),
-      questionType: question.questionType || 'MULTIPLE_CHOICE',
-      questionFileUrl: question.questionFile ? URL.createObjectURL(question.questionFile) : null,
-      questionFileName: question.questionFile?.name,
-      choices: question.choices.map((choice, choiceIndex): Choice => ({
-        id: `choice-${Date.now()}-${questionIndex}-${choiceIndex}`,
-        text: choice.text.trim(),
-        isCorrect: choice.isCorrect,
-      })),
-    }));
-    quizQuestions.forEach((question, index) => { if (question.questionFile) questionFiles[String(index)] = question.questionFile; });
-    const quiz = await api.createQuiz(selectedCourseForQuiz, quizChapterId, quizTitle, quizIsTimed, Number(quizTimeLimit), questions, quizResultsVisible, quizOpensAt || null, quizClosesAt || null, questionFiles);
-    const updatedChapters = targetCourse.chapters.map((chapter) => chapter.id === quizChapterId ? { ...chapter, quizzes: [...chapter.quizzes, quiz] } : chapter);
-    onUpdateCourse({ ...targetCourse, chapters: updatedChapters, quizzes: [...targetCourse.quizzes, quiz] });
-    setQuizTitle('');
-    setQuizChapterId('');
-    setQuizIsTimed(false);
-    setQuizOpensAt('');
-    setQuizClosesAt('');
-    setQuizResultsVisible(false);
-    setQuizQuestions([]);
-    setIsCreatingQuiz(false);
+    try {
+      const questionFiles: Record<string, File> = {};
+      const questions: Question[] = quizQuestions.map((question, questionIndex) => ({
+        id: `question-${Date.now()}-${questionIndex}`,
+        prompt: question.prompt.trim(),
+        questionType: question.questionType || 'MULTIPLE_CHOICE',
+        questionFileUrl: question.questionFile ? URL.createObjectURL(question.questionFile) : null,
+        questionFileName: question.questionFile?.name,
+        choices: question.choices.map((choice, choiceIndex): Choice => ({
+          id: `choice-${Date.now()}-${questionIndex}-${choiceIndex}`,
+          text: choice.text.trim(),
+          isCorrect: choice.isCorrect,
+        })),
+      }));
+      quizQuestions.forEach((question, index) => { if (question.questionFile) questionFiles[String(index)] = question.questionFile; });
+      const quiz = await api.createQuiz(selectedCourseForQuiz, quizChapterId, quizTitle, quizIsTimed, Number(quizTimeLimit), questions, quizResultsVisible, quizOpensAt || null, quizClosesAt || null, questionFiles);
+      const updatedChapters = targetCourse.chapters.map((chapter) => chapter.id === quizChapterId ? { ...chapter, quizzes: [...chapter.quizzes, quiz] } : chapter);
+      onUpdateCourse({ ...targetCourse, chapters: updatedChapters, quizzes: [...targetCourse.quizzes, quiz] });
+      setQuizTitle('');
+      setQuizChapterId('');
+      setQuizIsTimed(false);
+      setQuizOpensAt('');
+      setQuizClosesAt('');
+      setQuizResultsVisible(false);
+      setQuizQuestions([]);
+      setIsCreatingQuiz(false);
+    } catch (error) {
+      setCreationError(`Failed to create quiz: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const addQuizQuestion = (questionType: Question['questionType']) => {
@@ -350,13 +361,14 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-900">Create Course Chapter</h3>
+            {creationError && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{creationError}</div>}
             <form onSubmit={handleCreateChapterSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Chapter Title</label>
                 <input required value={chapterTitle} onChange={(e) => setChapterTitle(e.target.value)} placeholder="e.g. Chapter 1: Introduction" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none" />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setIsCreatingChapter(false)} className="px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
+                <button type="button" onClick={() => { setIsCreatingChapter(false); setCreationError(''); }} className="px-4 py-2 text-sm font-semibold text-slate-600">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-md shadow">Create Chapter</button>
               </div>
             </form>
@@ -477,6 +489,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-900">Create Chapter Quiz</h3>
+            {creationError && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{creationError}</div>}
             <form onSubmit={handleCreateQuizSubmit} className="space-y-4">
               <input required value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} placeholder="Quiz title" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
               <select required value={quizChapterId} onChange={(e) => setQuizChapterId(e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm">
@@ -555,7 +568,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                 ))}
                 {quizQuestions.length === 0 && <p className="text-xs text-slate-500">Add at least one question. Select the radio button beside the correct option.</p>}
               </div>
-              <div className="flex justify-end gap-2"><button type="button" onClick={() => setIsCreatingQuiz(false)} className="px-4 py-2 text-sm text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-amber-600 text-white font-bold text-sm rounded-md">Create Quiz</button></div>
+              <div className="flex justify-end gap-2"><button type="button" onClick={() => { setIsCreatingQuiz(false); setCreationError(''); }} className="px-4 py-2 text-sm text-slate-600">Cancel</button><button type="submit" className="px-4 py-2 bg-amber-600 text-white font-bold text-sm rounded-md">Create Quiz</button></div>
             </form>
           </div>
         </div>

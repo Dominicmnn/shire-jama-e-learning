@@ -237,7 +237,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 class QuizSerializer(serializers.ModelSerializer):
     questions = QuestionSerializer(many=True, read_only=True)
-    passingScorePercent = serializers.IntegerField(source='passing_score_percent')
+    passingScorePercent = serializers.SerializerMethodField()
     resultsVisibleToStudents = serializers.BooleanField(source='results_visible_to_students')
     opensAt = serializers.TimeField(source='opens_at', format='%H:%M', allow_null=True)
     closesAt = serializers.TimeField(source='closes_at', format='%H:%M', allow_null=True)
@@ -260,6 +260,13 @@ class QuizSerializer(serializers.ModelSerializer):
             'isTimed',
             'timeLimitMinutes',
         ]
+    
+    def get_passingScorePercent(self, obj):
+        request = self.context.get('request')
+        # Only show passing score to instructors and admins
+        if request and request.user.is_authenticated and request.user.role in [User.Role.INSTRUCTOR, User.Role.ADMIN]:
+            return obj.passing_score_percent
+        return None  # Hide from students
 
 
 class ChapterSerializer(serializers.ModelSerializer):
@@ -405,13 +412,24 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
         return obj.student.get_full_name() or obj.student.username
 
     def get_isGraded(self, obj):
-        return obj.manual_score is not None or not obj.quiz.questions.exclude(question_type__in=[Question.QuestionType.MULTIPLE_CHOICE, Question.QuestionType.TRUE_FALSE]).exists()
+        # A quiz is considered graded if:
+        # 1. It has a manual score set by instructor, OR
+        # 2. It only contains objective questions (which are auto-graded)
+        has_subjective = obj.quiz.questions.filter(
+            question_type__in=[Question.QuestionType.SHORT_ANSWER, Question.QuestionType.LONG_ANSWER, Question.QuestionType.FILE_UPLOAD]
+        ).exists()
+        return obj.manual_score is not None or not has_subjective
 
     def get_finalScore(self, obj):
         return obj.manual_score if obj.manual_score is not None else obj.score
 
     def get_finalPercentage(self, obj):
-        return obj.manual_score if obj.manual_score is not None else obj.percentage
+        # If instructor has manually graded, return the manual score as percentage
+        # Otherwise return the auto-calculated percentage
+        if obj.manual_score is not None:
+            # Manual score is already in percentage format (0-100)
+            return obj.manual_score
+        return round(obj.percentage, 1)
 
     def get_answerReview(self, obj):
         request = self.context.get('request')

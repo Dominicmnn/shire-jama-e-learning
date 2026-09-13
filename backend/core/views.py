@@ -407,8 +407,8 @@ class QuizCreateView(APIView):
 class QuizSubmitView(APIView):
     """
     Students submit their answers for a quiz.
-    The backend evaluates the submitted choices against correct answers,
-    records the attempt, and returns the score and percentage.
+    The backend evaluates only objective questions (Multiple Choice, True/False).
+    Subjective questions (Short Answer, Long Answer, File Upload) are marked as pending.
     """
     permission_classes = [permissions.IsAuthenticated, IsStudentUserRole]
 
@@ -433,10 +433,19 @@ class QuizSubmitView(APIView):
                 answers = json.loads(answers)
             except json.JSONDecodeError:
                 answers = {}
+        
+        # Validate file uploads first
+        for question in quiz.questions.all():
+            answer_file = request.FILES.get(f'answerFile_{question.id}')
+            if answer_file and Path(answer_file.name).suffix.lower() not in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'}:
+                return Response({'detail': 'Answer files must be images, PDFs, or Word documents.'}, status=status.HTTP_400_BAD_REQUEST)
+        
         total_questions = quiz.questions.count()
         objective_questions = quiz.questions.filter(question_type__in=[Question.QuestionType.MULTIPLE_CHOICE, Question.QuestionType.TRUE_FALSE]).count()
+        subjective_questions = total_questions - objective_questions
         correct_count = 0
 
+        # Only grade objective questions
         for question in quiz.questions.all():
             selected_choice_id = answers.get(str(question.id))
             if question.question_type not in [Question.QuestionType.MULTIPLE_CHOICE, Question.QuestionType.TRUE_FALSE]:
@@ -450,12 +459,11 @@ class QuizSubmitView(APIView):
                 if is_correct:
                     correct_count += 1
 
-        for question in quiz.questions.all():
-            answer_file = request.FILES.get(f'answerFile_{question.id}')
-            if answer_file and Path(answer_file.name).suffix.lower() not in {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx'}:
-                return Response({'detail': 'Answer files must be images, PDFs, or Word documents.'}, status=status.HTTP_400_BAD_REQUEST)
-
+        # Calculate percentage based on objective questions only
         percentage = round((correct_count / objective_questions) * 100, 1) if objective_questions > 0 else 0
+        
+        # Only mark as graded if there are no subjective questions
+        is_fully_graded = subjective_questions == 0
 
         attempt = QuizAttempt.objects.create(
             student=request.user,
@@ -465,23 +473,31 @@ class QuizSubmitView(APIView):
             percentage=percentage,
             answers={str(question_id): choice_id for question_id, choice_id in answers.items()},
             manual_score=None,
-            graded_at=timezone.now() if objective_questions == total_questions else None,
+            graded_at=timezone.now() if is_fully_graded else None,
         )
+        
+        # Store all responses (choices and file uploads)
         for question in quiz.questions.all():
             answer_file = request.FILES.get(f'answerFile_{question.id}')
             answer_value = answers.get(str(question.id), '')
             if answer_file or answer_value:
-                QuizResponse.objects.create(attempt=attempt, question=question, text_answer=str(answer_value), answer_file=answer_file)
+                QuizResponse.objects.create(
+                    attempt=attempt, 
+                    question=question, 
+                    text_answer=str(answer_value) if answer_value else '', 
+                    answer_file=answer_file
+                )
 
         response_data = {
             'attemptId': attempt.id,
-            'resultAvailable': quiz.results_visible_to_students and objective_questions == total_questions,
+            'resultAvailable': quiz.results_visible_to_students and is_fully_graded,
             'completedAt': attempt.completed_at.strftime('%Y-%m-%d %H:%M'),
-            'isGraded': objective_questions == total_questions,
+            'isGraded': is_fully_graded,
             'objectiveQuestions': objective_questions,
+            'subjectiveQuestions': subjective_questions,
             'totalQuestions': total_questions,
         }
-        if quiz.results_visible_to_students:
+        if quiz.results_visible_to_students and is_fully_graded:
             response_data.update({
                 'score': correct_count,
                 'totalQuestions': objective_questions,
