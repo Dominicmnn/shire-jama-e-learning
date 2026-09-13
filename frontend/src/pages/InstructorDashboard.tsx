@@ -73,6 +73,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
         selectedAnswer: selected?.text || null,
         correctAnswer: correct?.text || null,
         isCorrect: Boolean(selected && correct && selected.id === correct.id),
+        textAnswer: undefined,
+        answerFile: undefined,
       };
     }) || [];
   };
@@ -201,16 +203,27 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     if (!selectedCourseForChapter || !chapterTitle.trim()) return;
     setCreationError('');
     const targetCourse = courses.find((course) => course.id === selectedCourseForChapter);
-    if (!targetCourse) return;
+    if (!targetCourse) {
+      setCreationError('Course not found');
+      console.error('Target course not found:', selectedCourseForChapter, 'Available courses:', courses.map(c => c.id));
+      return;
+    }
     try {
+      console.log('Creating chapter for course:', selectedCourseForChapter, 'Title:', chapterTitle);
       const chapter = await api.createChapter(selectedCourseForChapter, chapterTitle);
-      const newChapter: Chapter = { ...chapter, order: targetCourse.chapters.length + 1 };
+      console.log('Chapter created:', chapter);
+      if (!chapter || !chapter.id) {
+        throw new Error('Invalid chapter response from server');
+      }
+      const newChapter: Chapter = { ...chapter, courseId: chapter.courseId || selectedCourseForChapter, order: chapter.order || (targetCourse.chapters.length + 1), materials: chapter.materials || [], quizzes: chapter.quizzes || [] };
       onUpdateCourse({ ...targetCourse, chapters: [...targetCourse.chapters, newChapter] });
       setChapterTitle('');
       setSelectedCourseForChapter(null);
       setIsCreatingChapter(false);
     } catch (error) {
-      setCreationError(`Failed to create chapter: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Chapter creation error:', errorMsg, error);
+      setCreationError(`Failed to create chapter: ${errorMsg}`);
     }
   };
 
