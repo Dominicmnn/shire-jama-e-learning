@@ -29,8 +29,15 @@ const apiRequest = async (path: string, options: RequestInit = {}) => {
   const token = getAccessToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
-  const response = await fetch(`${apiBaseUrl}${path}`, { ...options, headers });
-  if (!response.ok) throw new Error(await response.text() || `Request failed: ${response.status}`);
+  const fullUrl = `${apiBaseUrl}${path}`;
+  console.log(`[API] ${options.method || 'GET'} ${fullUrl}`);
+  const response = await fetch(fullUrl, { ...options, headers });
+  console.log(`[API] Response: ${response.status} ${response.statusText}`);
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[API ERROR] ${response.status}: ${errorText.substring(0, 200)}`);
+    throw new Error(errorText || `Request failed: ${response.status}`);
+  }
   return response.status === 204 ? null : response.json();
 };
 
@@ -92,6 +99,8 @@ const ensureTokens = () => {
   if (typeof window === 'undefined') return;
   const existing = window.localStorage.getItem(tokenStorageKey);
   if (!existing) {
+    // Set default demo token for development
+    console.log('[AUTH] No tokens found, setting demo tokens for development');
     window.localStorage.setItem(tokenStorageKey, JSON.stringify({ access: 'demo-token', refresh: 'demo-refresh-token' }));
   }
 };
