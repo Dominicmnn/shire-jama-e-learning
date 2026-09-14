@@ -7,7 +7,10 @@ const progressStorageKey = 'shire-jama-chapter-progress';
 const usersStorageKey = 'shire-jama-users';
 const createdQuizzesStorageKey = 'shire-jama-created-quizzes';
 // @ts-ignore
-const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api') as string;
+const configuredApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api') as string;
+const apiBaseUrl = configuredApiUrl.replace(/\/$/, '').endsWith('/api')
+  ? configuredApiUrl.replace(/\/$/, '')
+  : `${configuredApiUrl.replace(/\/$/, '')}/api`;
 
 const getAccessToken = () => {
   if (typeof window === 'undefined') return '';
@@ -278,7 +281,12 @@ export const api = {
 
   getQuizResults: async (): Promise<QuizAttempt[]> => apiRequest('/quiz-results/'),
 
-  gradeQuizAttempt: async (attemptId: string, score: number, feedback: string) => apiRequest(`/quiz-attempts/${attemptId}/grade/`, { method: 'POST', body: JSON.stringify({ score, feedback }) }),
+  gradeQuizAttempt: async (attemptId: string, score: number, feedback: string) => {
+    if (!/^\d+$/.test(String(attemptId))) {
+      throw new Error('This submission is not linked to a saved server attempt. Refresh the instructor dashboard and try again.');
+    }
+    return apiRequest(`/quiz-attempts/${attemptId}/grade/`, { method: 'POST', body: JSON.stringify({ score, feedback }) });
+  },
 
   adminProvisionInstructor: async (payload: { fullName: string; email: string; instructorCode?: string; temporaryPassword: string }) => {
     ensureTokens();
