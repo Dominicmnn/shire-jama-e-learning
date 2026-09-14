@@ -684,9 +684,9 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                       <td className="py-3 px-4 font-semibold text-slate-900">{a.studentName}</td>
                       <td className="py-3 px-4 text-xs">{a.quizTitle}</td>
                       <td className="py-3 px-4">
-                        {a.isGraded === false ? 'Pending' : `${a.finalScore ?? a.score} / ${a.totalQuestions}`}
+                        {a.isGraded !== true ? 'Pending' : `${a.finalScore ?? a.score} / ${a.totalQuestions}`}
                       </td>
-                      <td className="py-3 px-4 font-bold text-emerald-600">{a.isGraded === false ? 'Pending' : `${a.finalPercentage ?? a.percentage}%`}</td>
+                      <td className="py-3 px-4 font-bold text-emerald-600">{a.isGraded !== true ? 'Pending' : `${a.finalPercentage ?? a.percentage}%`}</td>
                       <td className="py-3 px-4 text-xs text-slate-400">{a.completedAt}</td>
                       <td className="py-3 px-4">
                         <button
@@ -696,7 +696,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                         >
                           {expandedAttemptId === a.id ? 'Hide answers' : 'Review answers'}
                         </button>
-                        {a.isGraded === false && <button type="button" onClick={() => { setGradingAttemptId(a.id); setGradeValue(''); setGradeFeedback(''); }} className="ml-3 text-xs font-bold text-emerald-700 hover:text-emerald-900">Enter grade</button>}
+                        {a.isGraded !== true && <button type="button" onClick={() => { setGradingAttemptId(a.id); setGradeValue(''); setGradeFeedback(''); }} className="ml-3 text-xs font-bold text-emerald-700 hover:text-emerald-900">Enter grade</button>}
                       </td>
                     </tr>
                     {expandedAttemptId === a.id && (
