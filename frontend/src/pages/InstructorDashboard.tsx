@@ -697,7 +697,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                         >
                           {expandedAttemptId === a.id ? 'Hide answers' : 'Review answers'}
                         </button>
-                        {a.isGraded !== true && <button type="button" onClick={() => { setGradingAttemptId(a.id); setGradeValue(''); setGradeFeedback(''); }} className="ml-3 text-xs font-bold text-emerald-700 hover:text-emerald-900">Enter grade</button>}
+                        {a.isGraded !== true && <button type="button" onClick={() => { setGradingAttemptId(a.id); setGradeValue(''); setGradeFeedback(''); }} className="ml-3 rounded bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-800">Grade student</button>}
                       </td>
                     </tr>
                     {expandedAttemptId === a.id && (
@@ -708,19 +708,14 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                               <p className="text-xs text-slate-500">Answer details are not available for this attempt.</p>
                             ) : getAttemptReview(a).map((review) => (
                               <div key={review.questionId} className="rounded-lg border border-slate-200 bg-white p-3">
-                                <p className="text-sm font-semibold text-slate-900">{review.question}</p>
                                 <p className="mt-1 text-xs text-slate-600">
-                                  Student answer: <span className="font-semibold">{review.textAnswer || review.selectedAnswer || (review.answerFile ? 'Uploaded file' : 'No answer')}</span>
+                                  Student answer:{' '}
+                                  {review.answerFile ? (
+                                    <a href={review.answerFile} target="_blank" rel="noreferrer" className="font-semibold text-blue-700 underline">View uploaded file</a>
+                                  ) : (
+                                    <span className="font-semibold">{review.textAnswer || review.selectedAnswer || 'No answer'}</span>
+                                  )}
                                 </p>
-                                {review.answerFile && <a href={review.answerFile} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-bold text-blue-700 underline">Open uploaded answer file</a>}
-                                {review.correctAnswer && <p className="text-xs text-emerald-700">Correct answer: <span className="font-semibold">{review.correctAnswer}</span></p>}
-                                {review.isCorrect === null ? (
-                                  <p className="mt-1 text-xs font-bold text-amber-700">Manual grade required</p>
-                                ) : review.isCorrect !== undefined && (
-                                  <p className={`mt-1 text-xs font-bold ${review.isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                    {review.isCorrect ? 'Correct' : 'Incorrect'}
-                                  </p>
-                                )}
                               </div>
                             ))}
                           </div>

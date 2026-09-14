@@ -59,6 +59,7 @@ export default function App() {
 
   const handleUpdateAttempt = (updatedAttempt) => {
     setAttempts((prev) => prev.map((attempt) => attempt.id === updatedAttempt.id ? updatedAttempt : attempt));
+    api.getQuizResults().then(setAttempts).catch(() => {});
   };
 
   // Instructor Actions
