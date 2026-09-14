@@ -96,8 +96,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
       setGradingAttemptId(null);
       setGradeValue('');
       setGradeFeedback('');
-    } catch {
-      setGradingError('The grade could not be saved. Check your connection and try again.');
+    } catch (error) {
+      setGradingError(error instanceof Error ? error.message : 'The grade could not be saved.');
     } finally {
       setIsSavingGrade(false);
     }

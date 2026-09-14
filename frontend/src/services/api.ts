@@ -36,7 +36,14 @@ const apiRequest = async (path: string, options: RequestInit = {}) => {
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[API ERROR] ${response.status}: ${errorText.substring(0, 200)}`);
-    throw new Error(errorText || `Request failed: ${response.status}`);
+    let message = errorText || `Request failed: ${response.status}`;
+    try {
+      const errorData = JSON.parse(errorText);
+      message = errorData.detail || errorData.score?.[0] || message;
+    } catch {
+      // Keep the raw response when the server did not return JSON.
+    }
+    throw new Error(`${response.status}: ${message}`);
   }
   return response.status === 204 ? null : response.json();
 };
