@@ -62,8 +62,17 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
       onLoginSuccess(user);
       setLoading(false);
       return;
-    } catch {
-      // Fallback to local accounts seamlessly if backend is unreachable
+    } catch (error) {
+      // Instructors need a real backend session to grade and cannot use demo accounts.
+      if (selectedRole === 'INSTRUCTOR') {
+        setLoading(false);
+        setErrorMsg(error instanceof Error && error.message.startsWith('401:')
+          ? 'Your instructor credentials were rejected. Sign in with the backend instructor account.'
+          : 'The backend is unavailable. Start Django and sign in again before grading submissions.');
+        return;
+      }
+
+      // Students and admins may still use the local demo fallback when the backend is unreachable.
       const trimmed = identifier.trim().toLowerCase();
       const matched = users.find(
         (u) =>
