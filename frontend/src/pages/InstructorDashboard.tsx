@@ -65,15 +65,16 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     if (attempt.answerReview) return attempt.answerReview;
     const quiz = courses.flatMap((course) => course.quizzes).find((item) => item.id === attempt.quizId);
     return quiz?.questions.map((question) => {
+      const isSubjective = ['SHORT_ANSWER', 'LONG_ANSWER', 'FILE_UPLOAD'].includes(question.questionType ?? '');
       const selected = question.choices.find((choice) => choice.id === attempt.answers[question.id]);
       const correct = question.choices.find((choice) => choice.isCorrect);
       return {
         questionId: question.id,
         question: question.prompt,
         selectedAnswer: selected?.text || null,
-        correctAnswer: correct?.text || null,
-        isCorrect: Boolean(selected && correct && selected.id === correct.id),
-        textAnswer: undefined,
+        correctAnswer: isSubjective ? null : (correct?.text || null),
+        isCorrect: isSubjective ? null : Boolean(selected && correct && selected.id === correct.id),
+        textAnswer: isSubjective ? attempt.answers[question.id] || null : undefined,
         answerFile: undefined,
       };
     }) || [];
@@ -711,7 +712,6 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                                 <p className="mt-1 text-xs text-slate-600">
                                   Student answer: <span className="font-semibold">{review.textAnswer || review.selectedAnswer || (review.answerFile ? 'Uploaded file' : 'No answer')}</span>
                                 </p>
-                                {review.textAnswer && review.textAnswer !== review.selectedAnswer && <p className="mt-1 text-xs text-slate-700">Written response: <span className="font-semibold">{review.textAnswer}</span></p>}
                                 {review.answerFile && <a href={review.answerFile} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-bold text-blue-700 underline">Open uploaded answer file</a>}
                                 {review.correctAnswer && <p className="text-xs text-emerald-700">Correct answer: <span className="font-semibold">{review.correctAnswer}</span></p>}
                                 {review.isCorrect === null ? (
