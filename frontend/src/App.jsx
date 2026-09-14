@@ -22,8 +22,9 @@ export default function App() {
   const [attempts, setAttempts] = useState(INITIAL_QUIZ_ATTEMPTS);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Load the initial course snapshot once. Subsequent edits stay in shared app state.
+  // Load courses after authentication so instructor ownership uses backend IDs.
   useEffect(() => {
+    if (!currentUser) return;
     async function loadData() {
       try {
         const liveCourses = await api.getCourses();
@@ -35,7 +36,7 @@ export default function App() {
       }
     }
     loadData();
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
