@@ -709,16 +709,18 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                               <div key={review.questionId} className="rounded-lg border border-slate-200 bg-white p-3">
                                 <p className="text-sm font-semibold text-slate-900">{review.question}</p>
                                 <p className="mt-1 text-xs text-slate-600">
-                                  Student answer: <span className="font-semibold">{review.selectedAnswer || 'No answer'}</span>
+                                  Student answer: <span className="font-semibold">{review.textAnswer || review.selectedAnswer || (review.answerFile ? 'Uploaded file' : 'No answer')}</span>
                                 </p>
                                 {review.textAnswer && review.textAnswer !== review.selectedAnswer && <p className="mt-1 text-xs text-slate-700">Written response: <span className="font-semibold">{review.textAnswer}</span></p>}
                                 {review.answerFile && <a href={review.answerFile} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-bold text-blue-700 underline">Open uploaded answer file</a>}
-                                <p className="text-xs text-emerald-700">
-                                  Correct answer: <span className="font-semibold">{review.correctAnswer || 'Not set'}</span>
-                                </p>
-                                <p className={`mt-1 text-xs font-bold ${review.isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                  {review.isCorrect ? 'Correct' : 'Incorrect'}
-                                </p>
+                                {review.correctAnswer && <p className="text-xs text-emerald-700">Correct answer: <span className="font-semibold">{review.correctAnswer}</span></p>}
+                                {review.isCorrect === null ? (
+                                  <p className="mt-1 text-xs font-bold text-amber-700">Manual grade required</p>
+                                ) : review.isCorrect !== undefined && (
+                                  <p className={`mt-1 text-xs font-bold ${review.isCorrect ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                    {review.isCorrect ? 'Correct' : 'Incorrect'}
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>

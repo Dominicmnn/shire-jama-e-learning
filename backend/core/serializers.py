@@ -446,6 +446,11 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             selected = next((choice for choice in question.choices.all() if str(choice.id) == selected_id), None)
             correct = next((choice for choice in question.choices.all() if choice.is_correct), None)
             response = obj.responses.filter(question=question).first()
+            is_subjective = question.question_type in [
+                Question.QuestionType.SHORT_ANSWER,
+                Question.QuestionType.LONG_ANSWER,
+                Question.QuestionType.FILE_UPLOAD,
+            ]
             answer_file = None
             if response and response.answer_file:
                 answer_file = response.answer_file.url
@@ -455,8 +460,8 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
                 'questionId': question.id,
                 'question': question.prompt,
                 'selectedAnswer': selected.text if selected else None,
-                'correctAnswer': correct.text if correct else None,
-                'isCorrect': bool(selected and correct and selected.id == correct.id),
+                'correctAnswer': None if is_subjective else (correct.text if correct else None),
+                'isCorrect': None if is_subjective else bool(selected and correct and selected.id == correct.id),
                 'textAnswer': response.text_answer if response else None,
                 'answerFile': answer_file,
             })

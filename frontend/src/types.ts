@@ -98,7 +98,7 @@ export interface QuizAttempt {
     question: string;
     selectedAnswer: string | null;
     correctAnswer: string | null;
-    isCorrect: boolean;
+    isCorrect: boolean | null;
     textAnswer?: string | null;
     answerFile?: string | null;
   }>;

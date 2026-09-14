@@ -273,7 +273,11 @@ class ShireJamaLmsTests(TestCase):
         self.assertEqual(self.client.get('/api/quiz-results/').data, [])
         self.assertEqual(self.client.post(f'/api/quiz-attempts/{attempt.id}/grade/', {'score': 85}).status_code, status.HTTP_403_FORBIDDEN)
         self.client.force_authenticate(user=self.instructor)
-        self.assertEqual(self.client.get('/api/quiz-results/').data[0]['isGraded'], False)
+        pending_attempt = self.client.get('/api/quiz-results/').data[0]
+        self.assertFalse(pending_attempt['isGraded'])
+        self.assertEqual(pending_attempt['answerReview'][0]['textAnswer'], 'Written response')
+        self.assertIsNone(pending_attempt['answerReview'][0]['correctAnswer'])
+        self.assertIsNone(pending_attempt['answerReview'][0]['isCorrect'])
         grade_response = self.client.post(f'/api/quiz-attempts/{attempt.id}/grade/', {'score': 85, 'feedback': 'Good work.'})
         self.assertEqual(grade_response.status_code, status.HTTP_200_OK)
         self.assertEqual(grade_response.data['finalScore'], 85)
