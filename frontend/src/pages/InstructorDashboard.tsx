@@ -91,8 +91,20 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     setIsSavingGrade(true);
     setGradingError('');
     try {
-      const graded = await api.gradeQuizAttempt(attempt.id, score, gradeFeedback);
-      onUpdateAttempt({ ...attempt, isGraded: true, finalScore: graded.finalScore, finalPercentage: graded.finalPercentage, manualFeedback: graded.manualFeedback ?? gradeFeedback });
+      let serverAttempt = attempt;
+      if (!/^\d+$/.test(String(attempt.id))) {
+        const serverAttempts = await api.getQuizResults();
+        const matchingAttempt = serverAttempts.find((candidate) => (
+          String(candidate.quizId) === String(attempt.quizId) &&
+          candidate.studentName === attempt.studentName
+        ));
+        if (!matchingAttempt) {
+          throw new Error('This submission has not been saved by the server yet. Submit the quiz again after starting the backend.');
+        }
+        serverAttempt = matchingAttempt;
+      }
+      const graded = await api.gradeQuizAttempt(serverAttempt.id, score, gradeFeedback);
+      onUpdateAttempt({ ...serverAttempt, isGraded: true, finalScore: graded.finalScore, finalPercentage: graded.finalPercentage, manualFeedback: graded.manualFeedback ?? gradeFeedback });
       setGradingAttemptId(null);
       setGradeValue('');
       setGradeFeedback('');
