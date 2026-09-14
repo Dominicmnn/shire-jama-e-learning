@@ -54,6 +54,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const [gradingAttemptId, setGradingAttemptId] = useState<string | null>(null);
   const [gradeValue, setGradeValue] = useState('');
   const [gradeFeedback, setGradeFeedback] = useState('');
+  const [gradingError, setGradingError] = useState('');
+  const [isSavingGrade, setIsSavingGrade] = useState(false);
   const [creationError, setCreationError] = useState('');
 
   // Filter courses authored by this instructor
@@ -82,12 +84,23 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
 
   const handleGradeAttempt = async (attempt: QuizAttempt) => {
     const score = Number(gradeValue);
-    if (!Number.isInteger(score) || score < 0 || score > 100) return;
-    const graded = await api.gradeQuizAttempt(attempt.id, score, gradeFeedback);
-    onUpdateAttempt({ ...attempt, isGraded: true, finalScore: graded.finalScore, finalPercentage: graded.finalPercentage, manualFeedback: gradeFeedback });
-    setGradingAttemptId(null);
-    setGradeValue('');
-    setGradeFeedback('');
+    if (!Number.isInteger(score) || score < 0 || score > 100) {
+      setGradingError('Enter a whole-number grade from 0 to 100.');
+      return;
+    }
+    setIsSavingGrade(true);
+    setGradingError('');
+    try {
+      const graded = await api.gradeQuizAttempt(attempt.id, score, gradeFeedback);
+      onUpdateAttempt({ ...attempt, isGraded: true, finalScore: graded.finalScore, finalPercentage: graded.finalPercentage, manualFeedback: graded.manualFeedback ?? gradeFeedback });
+      setGradingAttemptId(null);
+      setGradeValue('');
+      setGradeFeedback('');
+    } catch {
+      setGradingError('The grade could not be saved. Check your connection and try again.');
+    } finally {
+      setIsSavingGrade(false);
+    }
   };
 
   const handleCreateCourseSubmit = async (e: React.FormEvent) => {
@@ -697,7 +710,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                         >
                           {expandedAttemptId === a.id ? 'Hide answers' : 'Review answers'}
                         </button>
-                        {a.isGraded !== true && <button type="button" onClick={() => { setGradingAttemptId(a.id); setGradeValue(''); setGradeFeedback(''); }} className="ml-3 rounded bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-800">Grade student</button>}
+                        {a.isGraded !== true && <button type="button" onClick={() => { setGradingAttemptId(a.id); setGradeValue(''); setGradeFeedback(''); setGradingError(''); }} className="ml-3 rounded bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-800">Grade student</button>}
                       </td>
                     </tr>
                     {expandedAttemptId === a.id && (
@@ -727,8 +740,9 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                         <div className="flex flex-wrap items-end gap-3">
                           <label className="text-xs font-bold text-slate-700">Grade (0-100)<input type="number" min="0" max="100" value={gradeValue} onChange={(e) => setGradeValue(e.target.value)} className="mt-1 block w-28 rounded border border-slate-300 px-2 py-1.5 text-sm" /></label>
                           <label className="min-w-64 flex-1 text-xs font-bold text-slate-700">Feedback<textarea rows={2} value={gradeFeedback} onChange={(e) => setGradeFeedback(e.target.value)} className="mt-1 block w-full rounded border border-slate-300 px-2 py-1.5 text-sm" /></label>
-                          <button type="button" onClick={() => handleGradeAttempt(a)} className="rounded bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Save grade</button>
+                          <button type="button" disabled={isSavingGrade} onClick={() => handleGradeAttempt(a)} className="rounded bg-emerald-700 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60">{isSavingGrade ? 'Saving...' : 'Save grade'}</button>
                         </div>
+                        {gradingError && <p className="mt-2 text-xs font-semibold text-rose-700">{gradingError}</p>}
                       </td></tr>
                     )}
                   </React.Fragment>
