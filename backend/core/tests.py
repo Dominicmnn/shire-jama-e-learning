@@ -275,6 +275,8 @@ class ShireJamaLmsTests(TestCase):
         self.client.force_authenticate(user=self.instructor)
         pending_attempt = self.client.get('/api/quiz-results/').data[0]
         self.assertFalse(pending_attempt['isGraded'])
+        self.assertIsNone(pending_attempt['finalScore'])
+        self.assertIsNone(pending_attempt['finalPercentage'])
         self.assertEqual(pending_attempt['answerReview'][0]['textAnswer'], 'Written response')
         self.assertIsNone(pending_attempt['answerReview'][0]['correctAnswer'])
         self.assertIsNone(pending_attempt['answerReview'][0]['isCorrect'])

@@ -159,15 +159,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <td className="py-3 px-4 font-semibold text-slate-900">{att.quizTitle}</td>
                     <td className="py-3 px-4 text-slate-600 text-xs">{att.courseTitle}</td>
                     <td className="py-3 px-4">
-                      {att.isGraded === false ? 'Pending teacher grade' : `${att.finalScore ?? att.score} / ${att.totalQuestions}`}
+                      {att.isGraded !== true ? 'Pending teacher grade' : `${att.finalScore ?? att.score} / ${att.totalQuestions}`}
                     </td>
                     <td className="py-3 px-4">
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          att.percentage >= 70 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                          att.isGraded === true && att.percentage >= 70 ? 'bg-emerald-100 text-emerald-800' : att.isGraded === true ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
                         }`}
                       >
-                        {att.isGraded === false ? 'Pending' : `${att.finalPercentage ?? att.percentage}%`}
+                        {att.isGraded !== true ? 'Pending' : `${att.finalPercentage ?? att.percentage}%`}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs text-slate-500">{att.completedAt}</td>

@@ -425,13 +425,14 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
         return obj.manual_score is not None or not has_subjective
 
     def get_finalScore(self, obj):
-        return obj.manual_score if obj.manual_score is not None else obj.score
+        if self.get_isGraded(obj):
+            return obj.manual_score if obj.manual_score is not None else obj.score
+        return None
 
     def get_finalPercentage(self, obj):
-        # If instructor has manually graded, return the manual score as percentage
-        # Otherwise return the auto-calculated percentage
+        if not self.get_isGraded(obj):
+            return None
         if obj.manual_score is not None:
-            # Manual score is already in percentage format (0-100)
             return obj.manual_score
         return round(obj.percentage, 1)
 
