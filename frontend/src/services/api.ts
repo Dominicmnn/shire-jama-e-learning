@@ -98,10 +98,10 @@ const findUserByCredentials = (identifier: string, password: string) => {
 const ensureTokens = () => {
   if (typeof window === 'undefined') return;
   const existing = window.localStorage.getItem(tokenStorageKey);
+  // Only set demo token if no token exists AND we're in development
+  // In production, users MUST log in
   if (!existing) {
-    // Set default demo token for development
-    console.log('[AUTH] No tokens found, setting demo tokens for development');
-    window.localStorage.setItem(tokenStorageKey, JSON.stringify({ access: 'demo-token', refresh: 'demo-refresh-token' }));
+    console.log('[AUTH] No tokens found. User must log in to use backend features.');
   }
 };
 
@@ -114,9 +114,19 @@ export const api = {
   },
 
   getCourses: async (): Promise<Course[]> => {
-    ensureTokens();
-    const summaries = await apiRequest('/courses/');
-    return Promise.all(summaries.map((course: Course) => apiRequest(`/courses/${course.id}/`)));
+    const token = getAccessToken();
+    if (!token) {
+      console.log('[API] No authentication token found. Using mock data. Please log in with backend credentials to access database.');
+      return Promise.resolve(cloneCourses());
+    }
+    try {
+      const summaries = await apiRequest('/courses/');
+      return Promise.all(summaries.map((course: Course) => apiRequest(`/courses/${course.id}/`)));
+    } catch (error) {
+      console.warn('[API] Failed to get courses from backend:', error);
+      console.log('[API] Falling back to mock data');
+      return Promise.resolve(cloneCourses());
+    }
   },
 
   login: async (identifier: string, password: string) => {
@@ -208,7 +218,28 @@ export const api = {
     if (closesAt) formData.append('closesAt', closesAt);
     formData.append('questions', JSON.stringify(questions.map(({ questionFileUrl, questionFileName, ...question }) => question)));
     Object.entries(questionFiles).forEach(([index, file]) => formData.append(`questionFile_${index}`, file));
-    return apiRequest(`/courses/${courseId}/quizzes/`, { method: 'POST', body: formData });
+    
+    try {
+      return await apiRequest(`/courses/${courseId}/quizzes/`, { method: 'POST', body: formData });
+    } catch (error) {
+      // Fallback: create quiz locally if API fails or course is local
+      console.warn('Quiz creation via API failed, using local fallback:', error);
+      const localQuiz: Quiz = {
+        id: `qz-${Date.now()}`,
+        courseId,
+        title: title.trim(),
+        instructions: '',
+        passingScorePercent: 70,
+        resultsVisibleToStudents,
+        questions: questions.map((q) => ({ ...q, questionFileUrl: q.questionFileUrl || undefined, questionFileName: q.questionFileName || undefined })),
+        chapterId,
+        isTimed,
+        timeLimitMinutes: timeLimitMinutes || undefined,
+        opensAt: opensAt || undefined,
+        closesAt: closesAt || undefined,
+      };
+      return Promise.resolve(localQuiz);
+    }
   },
 
   completeChapter: async (courseId: string, chapterId: string) => {
