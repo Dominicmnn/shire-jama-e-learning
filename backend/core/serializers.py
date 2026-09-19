@@ -89,6 +89,7 @@ class AdminCreateStudentSerializer(serializers.ModelSerializer):
 
 class AdminCreateInstructorSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField(write_only=True, required=True)
+    username = serializers.CharField(required=False, allow_blank=True)
     temporaryPassword = serializers.CharField(write_only=True, required=False, default='ShireJama2024!')
 
     class Meta:

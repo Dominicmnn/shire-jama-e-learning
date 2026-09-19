@@ -33,6 +33,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [studentId, setStudentId] = useState('');
   const [studentLevel, setStudentLevel] = useState<AcademicLevel>('CLASS_1');
   const [studentError, setStudentError] = useState('');
+  const [instructorError, setInstructorError] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [instCode, setInstCode] = useState('');
@@ -58,6 +59,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleAddInstructorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setInstructorError('');
 
     try {
       const instructor = await api.adminProvisionInstructor({
@@ -68,7 +70,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
       onAddInstructor(instructor);
     } catch (error) {
-      setStudentError(error instanceof Error ? error.message : 'Instructor provisioning failed.');
+      setInstructorError(error instanceof Error ? error.message : 'Instructor provisioning failed.');
       setLoading(false);
       return;
     }
@@ -266,6 +268,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-lg p-6 space-y-4">
             <h3 className="text-lg font-bold text-slate-900">Provision Teacher Account</h3>
             <form onSubmit={handleAddInstructorSubmit} className="space-y-4">
+              {instructorError && <p className="rounded border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{instructorError}</p>}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Full Name & Title</label>
                 <input
