@@ -6,6 +6,12 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '')
   return {
     plugins: [react(), tailwindcss()],
+    server: {
+      proxy: {
+        '/api': 'http://localhost:8000',
+        '/media': 'http://localhost:8000',
+      },
+    },
     define: {
       'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || ''),
     },
