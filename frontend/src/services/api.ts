@@ -51,6 +51,14 @@ const apiRequest = async (path: string, options: RequestInit = {}) => {
   return response.status === 204 ? null : response.json();
 };
 
+const normalizeQuizAttempt = (attempt: any): QuizAttempt => ({
+  ...attempt,
+  id: String(attempt.id),
+  quizId: String(attempt.quizId ?? attempt.quiz_id),
+  studentId: String(attempt.studentId ?? attempt.student_id ?? ''),
+  answers: attempt.answers ?? {},
+});
+
 const getCreatedQuizzes = (): Quiz[] => {
   if (typeof window === 'undefined') return [];
   try {
@@ -238,7 +246,10 @@ export const api = {
     return apiRequest(`/quizzes/${quizId}/submit/`, { method: 'POST', body: formData });
   },
 
-  getQuizResults: async (): Promise<QuizAttempt[]> => apiRequest('/quiz-results/'),
+  getQuizResults: async (): Promise<QuizAttempt[]> => {
+    const attempts = await apiRequest('/quiz-results/');
+    return attempts.map(normalizeQuizAttempt);
+  },
 
   gradeQuizAttempt: async (attemptId: string, score: number, feedback: string) => {
     if (!/^\d+$/.test(String(attemptId))) {

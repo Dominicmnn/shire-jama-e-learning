@@ -79,40 +79,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       setIsSubmitted(true);
       setIsSubmitting(false);
       return;
-    } catch {
-      // Fallback local evaluation if offline
-      let correct = 0;
-      quiz.questions.forEach((q) => {
-        const picked = selectedAnswers[q.id];
-        const correctChoice = q.choices.find((c) => c.isCorrect);
-        if (correctChoice && picked === correctChoice.id) {
-          correct += 1;
-        }
-      });
-
-      const total = quiz.questions.length;
-      const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-
-      const attempt: QuizAttempt = {
-        id: `att-${Date.now()}`,
-        quizId: quiz.id,
-        quizTitle: quiz.title,
-        courseTitle,
-        studentId: student.id,
-        studentName: student.fullName,
-        score: correct,
-        totalQuestions: total,
-        percentage: pct,
-        completedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
-        answers: selectedAnswers,
-        resultAvailable: quiz.resultsVisibleToStudents === true,
-        answerReview,
-      };
-
-      setAttemptResult(attempt);
-      onSubmitAttempt(attempt);
-      setIsSubmitted(true);
+    } catch (error) {
+      console.error('Quiz submission failed:', error);
       setIsSubmitting(false);
+      window.alert(error instanceof Error ? error.message : 'The quiz could not be submitted. Please try again.');
     }
   };
 

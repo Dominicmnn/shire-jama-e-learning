@@ -11,6 +11,7 @@ interface InstructorDashboardProps {
   onDeleteCourse: (courseId: string) => void;
   allAttempts: QuizAttempt[];
   onUpdateAttempt: (attempt: QuizAttempt) => void;
+  onRefreshAttempts: () => Promise<void>;
 }
 
 export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
@@ -21,6 +22,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   onDeleteCourse,
   allAttempts,
   onUpdateAttempt,
+  onRefreshAttempts,
 }) => {
   const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const [courseTitle, setCourseTitle] = useState('');
@@ -57,11 +59,16 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const [gradingError, setGradingError] = useState('');
   const [isSavingGrade, setIsSavingGrade] = useState(false);
   const [creationError, setCreationError] = useState('');
+  const [isRefreshingAttempts, setIsRefreshingAttempts] = useState(false);
 
   // Filter courses authored by this instructor
   const myCourses = courses.filter((c) => c.instructorId === instructor.id || c.instructorName === instructor.fullName);
-  const ownedQuizIds = new Set(myCourses.flatMap((course) => [...course.quizzes, ...course.chapters.flatMap((chapter) => chapter.quizzes)].map((quiz) => quiz.id)));
-  const visibleAttempts = allAttempts.filter((attempt) => ownedQuizIds.has(attempt.quizId));
+  const ownedQuizIds = new Set(
+    myCourses
+      .flatMap((course) => [...course.quizzes, ...course.chapters.flatMap((chapter) => chapter.quizzes)])
+      .map((quiz) => String(quiz.id))
+  );
+  const visibleAttempts = allAttempts.filter((attempt) => ownedQuizIds.has(String(attempt.quizId)));
 
   const getAttemptReview = (attempt: QuizAttempt) => {
     if (attempt.answerReview) return attempt.answerReview;
@@ -112,6 +119,17 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
       setGradingError(error instanceof Error ? error.message : 'The grade could not be saved.');
     } finally {
       setIsSavingGrade(false);
+    }
+  };
+
+  const handleRefreshAttempts = async () => {
+    setIsRefreshingAttempts(true);
+    try {
+      await onRefreshAttempts();
+    } catch (error) {
+      console.error('Failed to refresh quiz submissions:', error);
+    } finally {
+      setIsRefreshingAttempts(false);
     }
   };
 
@@ -670,10 +688,16 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
 
       {/* Student Attempt Oversight */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <Award className="w-5 h-5 text-amber-600" />
-          <span>Student Submissions Overview</span>
-        </h2>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Award className="w-5 h-5 text-amber-600" />
+            <span>Student Submissions Overview</span>
+          </h2>
+          <button type="button" onClick={handleRefreshAttempts} disabled={isRefreshingAttempts} className="inline-flex items-center gap-1.5 rounded border border-slate-300 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingAttempts ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
         {visibleAttempts.length === 0 ? (
           <p className="text-xs text-slate-400">No attempts submitted yet.</p>
         ) : (

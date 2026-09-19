@@ -38,7 +38,10 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser) return;
-    api.getQuizResults().then(setAttempts).catch(() => {});
+    api.getQuizResults().then(setAttempts).catch((error) => {
+      console.error('Failed to load quiz submissions:', error);
+      setAttempts([]);
+    });
   }, [currentUser]);
 
   // Authentication Handlers
@@ -53,12 +56,20 @@ export default function App() {
 
   const handleQuizSubmit = (attempt) => {
     setAttempts((prev) => [attempt, ...prev.filter((item) => item.id !== attempt.id)]);
-    api.getQuizResults().then(setAttempts).catch(() => {});
+    api.getQuizResults().then(setAttempts).catch((error) => {
+      console.error('Failed to refresh quiz submissions:', error);
+    });
   };
 
   const handleUpdateAttempt = (updatedAttempt) => {
     setAttempts((prev) => prev.map((attempt) => attempt.id === updatedAttempt.id ? updatedAttempt : attempt));
-    api.getQuizResults().then(setAttempts).catch(() => {});
+    api.getQuizResults().then(setAttempts).catch((error) => {
+      console.error('Failed to refresh quiz submissions:', error);
+    });
+  };
+
+  const handleRefreshAttempts = async () => {
+    setAttempts(await api.getQuizResults());
   };
 
   // Instructor Actions
@@ -157,6 +168,7 @@ export default function App() {
             onDeleteCourse={handleDeleteCourse}
             allAttempts={attempts}
             onUpdateAttempt={handleUpdateAttempt}
+            onRefreshAttempts={handleRefreshAttempts}
           />
         )}
 
