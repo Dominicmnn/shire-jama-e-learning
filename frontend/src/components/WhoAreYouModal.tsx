@@ -64,9 +64,11 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
       return;
     } catch (error) {
       setLoading(false);
-      setErrorMsg(error instanceof Error && error.message.startsWith('401:')
-        ? 'Your credentials were rejected. Sign in with an active backend account.'
-        : 'The backend is unavailable. Start Django and sign in again.');
+      if (error instanceof Error && error.message.startsWith('401:')) {
+        setErrorMsg('This account is not active on the connected server, or the password is incorrect. Ask the administrator to use Reset Pass for this learner, then sign in with the new password.');
+      } else {
+        setErrorMsg('The backend is unavailable. Start Django and sign in again.');
+      }
     }
   };
 
