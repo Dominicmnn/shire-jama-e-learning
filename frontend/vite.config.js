@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), tailwindcss()],
     server: {
+      host: '0.0.0.0',
       proxy: {
         '/api': 'http://127.0.0.1:8000',
         '/media': 'http://127.0.0.1:8000',
