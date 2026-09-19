@@ -49,11 +49,12 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
           if (response.status === 404) throw new Error('The PDF file is missing from server storage. Ask the administrator to restore the uploaded file.');
           throw new Error(`The document server returned HTTP ${response.status}.`);
         }
-        const file = await response.blob();
-        if (file.type && file.type !== 'application/pdf' && !file.type.endsWith('/pdf')) {
+        const fileType = response.headers.get('content-type') || '';
+        if (fileType && !fileType.toLowerCase().includes('application/pdf')) {
           throw new Error('The server did not return a PDF file. Ask the instructor to upload a PDF document.');
         }
-        const nextViewerUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
+        const fileBuffer = await response.arrayBuffer();
+        const nextViewerUrl = URL.createObjectURL(new Blob([fileBuffer], { type: 'application/pdf' }));
         viewerUrlRef.current = nextViewerUrl;
         setViewerUrl(nextViewerUrl);
       } catch (error) {
