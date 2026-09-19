@@ -60,7 +60,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
         }
         const fileBuffer = await response.arrayBuffer();
         if (fileBuffer.byteLength === 0) {
-          throw new Error('The PDF file is empty on server storage. Ask the instructor to upload it again.');
+          throw new Error('The document server returned an empty response. Refresh the page and sign in again.');
         }
         const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise;
         if (!active) {

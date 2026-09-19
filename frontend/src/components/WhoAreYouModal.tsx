@@ -66,8 +66,12 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
       setLoading(false);
       if (error instanceof Error && error.message.startsWith('401:')) {
         setErrorMsg('This account is not active on the connected server, or the password is incorrect. Ask the administrator to use Reset Pass for this learner, then sign in with the new password.');
+      } else if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        setErrorMsg('Django could not be reached. Make sure the backend is running at http://127.0.0.1:8000, then try again.');
+      } else if (error instanceof Error) {
+        setErrorMsg(error.message.replace(/^\d+:\s*/, ''));
       } else {
-        setErrorMsg('The backend is unavailable. Start Django and sign in again.');
+        setErrorMsg('Sign-in failed. Check the server and try again.');
       }
     }
   };
