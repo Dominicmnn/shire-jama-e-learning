@@ -127,22 +127,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error('Course creation failed:', errorMsg, error);
-      // Fallback local creation
-      const localCourse: Course = {
-        id: `c-${Date.now()}`,
-        title: courseTitle.trim(),
-        description: courseDesc.trim(),
-        instructorId: instructor.id,
-        instructorName: instructor.fullName,
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0],
-        materials: [],
-        quizzes: [],
-        chapters: [],
-        academicLevels: courseAcademicLevels,
-      };
-      console.warn('Using local fallback for course creation. Backend connection may be down. File uploads will not work for this course.');
-      onCreateCourse(localCourse);
+      setCreationError(`Failed to create course: ${errorMsg}`);
+      return;
     }
 
     setCourseTitle('');

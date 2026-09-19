@@ -28,9 +28,7 @@ export default function App() {
     async function loadData() {
       try {
         const liveCourses = await api.getCourses();
-        if (liveCourses && liveCourses.length > 0) {
-          setCourses(liveCourses);
-        }
+        setCourses(liveCourses || []);
       } catch {
         // Seamless fallback to local default courses
       }

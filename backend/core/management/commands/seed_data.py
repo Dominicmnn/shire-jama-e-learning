@@ -75,7 +75,11 @@ class Command(BaseCommand):
             }
         )
         student.set_password('Student2024!')
+        student.academic_level = student.academic_level or User.AcademicLevel.CLASS_1
         student.save()
+        User.objects.filter(role=User.Role.STUDENT, academic_level__isnull=True).update(
+            academic_level=User.AcademicLevel.CLASS_1
+        )
         self.stdout.write(self.style.SUCCESS("✓ Student ready (faiza / pass: Student2024!)"))
 
         # 5. Course: Somali Literacy & Shire Jama Script
@@ -83,9 +87,13 @@ class Command(BaseCommand):
             title='Somali Script & Functional Adult Literacy',
             instructor=inst1,
             defaults={
-                'description': 'Foundational literacy program focusing on reading fluency, grammar, and official written Somali using the script formalized by Shire Jama Ahmed in 1972.'
+                'description': 'Foundational literacy program focusing on reading fluency, grammar, and official written Somali using the script formalized by Shire Jama Ahmed in 1972.',
+                'academic_levels': [User.AcademicLevel.CLASS_1],
             }
         )
+        if not course1.academic_levels:
+            course1.academic_levels = [User.AcademicLevel.CLASS_1]
+            course1.save(update_fields=['academic_levels', 'updated_at'])
 
         # 6. Sample Quiz for Course 1
         quiz1, _ = Quiz.objects.get_or_create(
@@ -130,12 +138,16 @@ class Command(BaseCommand):
             Choice.objects.create(question=q3, text='Letter "KH"', is_correct=False)
 
         # 7. Course: Practical English & Numeracy
-        Course.objects.get_or_create(
+        course2, _ = Course.objects.get_or_create(
             title='Practical Workplace English & Everyday Numeracy',
             instructor=inst2,
             defaults={
-                'description': 'Essential vocabulary, practical conversational skills, and practical mathematical operations for adults in commerce and modern workplaces.'
+                'description': 'Essential vocabulary, practical conversational skills, and practical mathematical operations for adults in commerce and modern workplaces.',
+                'academic_levels': [User.AcademicLevel.CLASS_1],
             }
         )
+        if not course2.academic_levels:
+            course2.academic_levels = [User.AcademicLevel.CLASS_1]
+            course2.save(update_fields=['academic_levels', 'updated_at'])
 
         self.stdout.write(self.style.SUCCESS("All seed data created successfully!"))

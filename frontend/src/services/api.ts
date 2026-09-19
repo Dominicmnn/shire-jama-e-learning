@@ -126,17 +126,10 @@ export const api = {
   getCourses: async (): Promise<Course[]> => {
     const token = getAccessToken();
     if (!token) {
-      console.log('[API] No authentication token found. Using mock data. Please log in with backend credentials to access database.');
-      return Promise.resolve(cloneCourses());
+      throw new Error('You must be signed in to load courses.');
     }
-    try {
-      const summaries = await apiRequest('/courses/');
-      return Promise.all(summaries.map((course: Course) => apiRequest(`/courses/${course.id}/`)));
-    } catch (error) {
-      console.warn('[API] Failed to get courses from backend:', error);
-      console.log('[API] Falling back to mock data');
-      return Promise.resolve(cloneCourses());
-    }
+    const summaries = await apiRequest('/courses/');
+    return Promise.all(summaries.map((course: Course) => apiRequest(`/courses/${course.id}/`)));
   },
 
   login: async (identifier: string, password: string) => {
@@ -189,21 +182,7 @@ export const api = {
   },
 
   createChapter: async (courseId: string, title: string): Promise<Chapter> => {
-    try {
-      return await apiRequest(`/courses/${courseId}/chapters/`, { method: 'POST', body: JSON.stringify({ title: title.trim() }) });
-    } catch (error) {
-      // Fallback: create chapter locally if course is local or API fails
-      const localChapter: Chapter = {
-        id: `ch-${Date.now()}`,
-        courseId,
-        title: title.trim(),
-        order: 1,
-        materials: [],
-        quizzes: [],
-      };
-      console.warn('Chapter creation via API failed, using local fallback:', error);
-      return Promise.resolve(localChapter);
-    }
+    return apiRequest(`/courses/${courseId}/chapters/`, { method: 'POST', body: JSON.stringify({ title: title.trim() }) });
   },
 
   createQuiz: async (
@@ -229,27 +208,7 @@ export const api = {
     formData.append('questions', JSON.stringify(questions.map(({ questionFileUrl, questionFileName, ...question }) => question)));
     Object.entries(questionFiles).forEach(([index, file]) => formData.append(`questionFile_${index}`, file));
     
-    try {
-      return await apiRequest(`/courses/${courseId}/quizzes/`, { method: 'POST', body: formData });
-    } catch (error) {
-      // Fallback: create quiz locally if API fails or course is local
-      console.warn('Quiz creation via API failed, using local fallback:', error);
-      const localQuiz: Quiz = {
-        id: `qz-${Date.now()}`,
-        courseId,
-        title: title.trim(),
-        instructions: '',
-        passingScorePercent: 70,
-        resultsVisibleToStudents,
-        questions: questions.map((q) => ({ ...q, questionFileUrl: q.questionFileUrl || undefined, questionFileName: q.questionFileName || undefined })),
-        chapterId,
-        isTimed,
-        timeLimitMinutes: timeLimitMinutes || undefined,
-        opensAt: opensAt || undefined,
-        closesAt: closesAt || undefined,
-      };
-      return Promise.resolve(localQuiz);
-    }
+    return apiRequest(`/courses/${courseId}/quizzes/`, { method: 'POST', body: formData });
   },
 
   completeChapter: async (courseId: string, chapterId: string) => {
