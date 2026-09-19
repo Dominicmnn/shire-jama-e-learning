@@ -152,6 +152,26 @@ class ShireJamaLmsTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Course.objects.filter(title='Intermediate Somali Grammar').count(), 1)
 
+    def test_admin_created_student_can_login_with_submitted_credentials(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.post('/api/admin/students/', {
+            'fullName': 'New Student',
+            'email': 'new.student@example.com',
+            'username': 'new_student',
+            'password': 'StudentPass123!',
+            'studentId': 'STD-NEW-001',
+            'academicLevel': 'CLASS_1',
+        }, format='json', HTTP_HOST='localhost')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.client.force_authenticate(user=None)
+        login = self.client.post('/api/auth/login/', {
+            'username': 'new_student',
+            'password': 'StudentPass123!',
+        }, format='json', HTTP_HOST='localhost')
+        self.assertEqual(login.status_code, status.HTTP_200_OK)
+        self.assertIn('access', login.data)
+
     def test_admin_can_update_student_and_instructor_details(self):
         self.client.force_authenticate(user=self.admin)
         student_response = self.client.patch(
