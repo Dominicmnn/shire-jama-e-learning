@@ -123,14 +123,14 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
         <div className="flex-1 bg-slate-100 p-2 relative">
           {loading && <div className="h-full flex items-center justify-center text-sm text-slate-600">Opening document...</div>}
           {!loading && loadError && <div className="h-full flex items-center justify-center p-6 text-center text-sm font-semibold text-rose-700">{loadError}</div>}
-          {!loading && !loadError && <div className="flex h-full flex-col items-center gap-3 overflow-auto">
+          <div className={`h-full flex-col items-center gap-3 overflow-auto ${loading || loadError ? 'hidden' : 'flex'}`}>
             <canvas ref={canvasRef} className="max-w-full border border-slate-200 bg-white shadow" />
             {pageCount > 1 && <div className="sticky bottom-2 flex items-center gap-3 rounded-lg bg-slate-900 px-3 py-2 text-xs text-white shadow">
               <button type="button" disabled={pageNumber <= 1} onClick={() => setPageNumber((page) => Math.max(1, page - 1))} className="rounded p-1 hover:bg-slate-700 disabled:opacity-40" aria-label="Previous page"><ChevronLeft className="h-4 w-4" /></button>
               <span>Page {pageNumber} of {pageCount}</span>
               <button type="button" disabled={pageNumber >= pageCount} onClick={() => setPageNumber((page) => Math.min(pageCount, page + 1))} className="rounded p-1 hover:bg-slate-700 disabled:opacity-40" aria-label="Next page"><ChevronRight className="h-4 w-4" /></button>
             </div>}
-          </div>}
+          </div>
         </div>
 
         {/* Footer Notes */}
