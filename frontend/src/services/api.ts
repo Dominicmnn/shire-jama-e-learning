@@ -22,6 +22,43 @@ const getAccessToken = () => {
   try { return JSON.parse(window.localStorage.getItem(tokenStorageKey) || '{}').access || ''; } catch { return ''; }
 };
 
+const getRefreshToken = () => {
+  if (typeof window === 'undefined') return '';
+  try { return JSON.parse(window.localStorage.getItem(tokenStorageKey) || '{}').refresh || ''; } catch { return ''; }
+};
+
+const refreshAccessToken = async () => {
+  const refresh = getRefreshToken();
+  if (!refresh) return '';
+  const response = await fetch(`${apiBaseUrl}/auth/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh }),
+  });
+  if (!response.ok) return '';
+  const result = await response.json();
+  window.localStorage.setItem(tokenStorageKey, JSON.stringify({ access: result.access, refresh: result.refresh || refresh }));
+  return result.access;
+};
+
+export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const headers = new Headers(options.headers);
+  const accessToken = getAccessToken();
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  let response = await fetch(url, { ...options, headers });
+  if (response.status === 401 && accessToken) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) {
+      headers.set('Authorization', `Bearer ${refreshedToken}`);
+      response = await fetch(url, { ...options, headers });
+    }
+  }
+  if (response.status === 401 && typeof window !== 'undefined') {
+    window.localStorage.removeItem(tokenStorageKey);
+  }
+  return response;
+};
+
 const normalizeUser = (user: any): User => ({
   ...user,
   studentId: user.studentId ?? user.student_id,
@@ -34,17 +71,12 @@ const normalizeUser = (user: any): User => ({
 
 const apiRequest = async (path: string, options: RequestInit = {}) => {
   const headers = new Headers(options.headers);
-  const token = getAccessToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
   if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   const fullUrl = `${apiBaseUrl}${path}`;
   console.log(`[API] ${options.method || 'GET'} ${fullUrl}`);
-  const response = await fetch(fullUrl, { ...options, headers });
+  const response = await authenticatedFetch(fullUrl, { ...options, headers });
   console.log(`[API] Response: ${response.status} ${response.statusText}`);
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== 'undefined') {
-      window.localStorage.removeItem(tokenStorageKey);
-    }
     const errorText = await response.text();
     console.error(`[API ERROR] ${response.status}: ${errorText.substring(0, 200)}`);
     let message = errorText || `Request failed: ${response.status}`;

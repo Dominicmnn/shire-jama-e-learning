@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LearningMaterial } from '../types';
-import { getMaterialStreamUrl } from '../services/api';
+import { authenticatedFetch, getMaterialStreamUrl } from '../services/api';
 import { X, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -40,14 +40,9 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
       setLoading(true);
       setLoadError('');
       try {
-        const storedTokens = window.localStorage.getItem('shire-jama-auth-tokens');
-        const accessToken = storedTokens ? JSON.parse(storedTokens).access : null;
         const requestUrl = getMaterialStreamUrl(String(material.id));
-        const response = await fetch(requestUrl, {
+        const response = await authenticatedFetch(requestUrl, {
           cache: 'no-store',
-          headers: accessToken && !requestUrl.startsWith('blob:')
-            ? { Authorization: `Bearer ${accessToken}` }
-            : undefined,
         });
         if (!response.ok) {
           if (response.status === 401) throw new Error('Your session has expired. Please sign in again.');
