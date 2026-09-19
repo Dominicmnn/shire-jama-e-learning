@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LearningMaterial } from '../types';
 import { X, FileText } from 'lucide-react';
 
@@ -11,11 +11,21 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const viewerUrlRef = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (viewerUrlRef.current) URL.revokeObjectURL(viewerUrlRef.current);
+  }, []);
 
   useEffect(() => {
     if (!material) return undefined;
 
-    let objectUrl: string | null = null;
+    if (viewerUrlRef.current) {
+      URL.revokeObjectURL(viewerUrlRef.current);
+      viewerUrlRef.current = null;
+    }
+    setViewerUrl(null);
+
     const loadDocument = async () => {
       setLoading(true);
       setLoadError('');
@@ -37,8 +47,9 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
         if (file.type && file.type !== 'application/pdf' && !file.type.endsWith('/pdf')) {
           throw new Error('The server did not return a PDF file. Ask the instructor to upload a PDF document.');
         }
-        objectUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
-        setViewerUrl(objectUrl);
+        const nextViewerUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
+        viewerUrlRef.current = nextViewerUrl;
+        setViewerUrl(nextViewerUrl);
       } catch (error) {
         setLoadError(error instanceof TypeError && error.message === 'Failed to fetch'
           ? 'The document server could not be reached. Start the backend locally or configure VITE_API_URL for the deployed frontend.'
@@ -49,9 +60,6 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
     };
 
     loadDocument();
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
   }, [material]);
 
   if (!material) return null;
