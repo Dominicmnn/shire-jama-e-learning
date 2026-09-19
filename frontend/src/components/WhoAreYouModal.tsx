@@ -63,36 +63,10 @@ export const WhoAreYouModal: React.FC<WhoAreYouModalProps> = ({
       setLoading(false);
       return;
     } catch (error) {
-      // Instructors need a real backend session to grade and cannot use demo accounts.
-      if (selectedRole === 'INSTRUCTOR') {
-        setLoading(false);
-        setErrorMsg(error instanceof Error && error.message.startsWith('401:')
-          ? 'Your instructor credentials were rejected. Sign in with the backend instructor account.'
-          : 'The backend is unavailable. Start Django and sign in again before grading submissions.');
-        return;
-      }
-
-      // Students and admins may still use the local demo fallback when the backend is unreachable.
-      const trimmed = identifier.trim().toLowerCase();
-      const matched = users.find(
-        (u) =>
-          u.role === selectedRole &&
-          (u.username.toLowerCase() === trimmed || u.email.toLowerCase() === trimmed)
-      );
-
       setLoading(false);
-
-      if (!matched) {
-        setErrorMsg(`Invalid credentials. Please verify your username and password.`);
-        return;
-      }
-
-      if (!matched.isActive) {
-        setErrorMsg('This account has been deactivated by the administrator. Please contact school administration.');
-        return;
-      }
-
-      onLoginSuccess(matched);
+      setErrorMsg(error instanceof Error && error.message.startsWith('401:')
+        ? 'Your credentials were rejected. Sign in with an active backend account.'
+        : 'The backend is unavailable. Start Django and sign in again.');
     }
   };
 

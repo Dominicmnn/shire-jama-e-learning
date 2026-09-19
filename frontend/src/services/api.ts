@@ -37,6 +37,9 @@ const apiRequest = async (path: string, options: RequestInit = {}) => {
   const response = await fetch(fullUrl, { ...options, headers });
   console.log(`[API] Response: ${response.status} ${response.statusText}`);
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      window.localStorage.removeItem(tokenStorageKey);
+    }
     const errorText = await response.text();
     console.error(`[API ERROR] ${response.status}: ${errorText.substring(0, 200)}`);
     let message = errorText || `Request failed: ${response.status}`;
