@@ -83,7 +83,8 @@ export default function App() {
     );
   };
 
-  const handleDeleteCourse = (courseId) => {
+  const handleDeleteCourse = async (courseId) => {
+    await api.deleteCourse(courseId);
     setCourses((prev) => prev.filter((c) => c.id !== courseId));
   };
 

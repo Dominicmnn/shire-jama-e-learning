@@ -8,7 +8,7 @@ interface InstructorDashboardProps {
   courses: Course[];
   onCreateCourse: (course: Course) => void;
   onUpdateCourse: (course: Course) => void;
-  onDeleteCourse: (courseId: string) => void;
+  onDeleteCourse: (courseId: string) => void | Promise<void>;
   allAttempts: QuizAttempt[];
   onUpdateAttempt: (attempt: QuizAttempt) => void;
   onRefreshAttempts: () => Promise<void>;
@@ -59,6 +59,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
   const [gradingError, setGradingError] = useState('');
   const [isSavingGrade, setIsSavingGrade] = useState(false);
   const [creationError, setCreationError] = useState('');
+  const [deletionError, setDeletionError] = useState('');
   const [isRefreshingAttempts, setIsRefreshingAttempts] = useState(false);
 
   // Filter courses authored by this instructor
@@ -130,6 +131,15 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
       console.error('Failed to refresh quiz submissions:', error);
     } finally {
       setIsRefreshingAttempts(false);
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    setDeletionError('');
+    try {
+      await onDeleteCourse(courseId);
+    } catch (error) {
+      setDeletionError(error instanceof Error ? error.message : 'The course could not be deleted.');
     }
   };
 
@@ -330,6 +340,8 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
           <span>{uploadSuccess}</span>
         </div>
       )}
+
+      {deletionError && <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{deletionError}</div>}
 
       {/* Course Creation Modal */}
       {isCreatingCourse && (
@@ -626,7 +638,7 @@ export const InstructorDashboard: React.FC<InstructorDashboardProps> = ({
                 <div className="flex justify-between items-start">
                   <h3 className="text-lg font-bold text-slate-900 font-serif">{c.title}</h3>
                   <button
-                    onClick={() => onDeleteCourse(c.id)}
+                    onClick={() => handleDeleteCourse(c.id)}
                     className="p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
                     title="Delete Course"
                   >

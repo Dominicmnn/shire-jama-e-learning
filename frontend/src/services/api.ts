@@ -171,6 +171,13 @@ export const api = {
     return apiRequest('/courses/', { method: 'POST', body: JSON.stringify({ title: title.trim(), description: description.trim(), academicLevels }) });
   },
 
+  deleteCourse: async (courseId: string) => {
+    if (!/^\d+$/.test(String(courseId))) {
+      throw new Error('This course is not saved on the server and cannot be deleted.');
+    }
+    return apiRequest(`/courses/${courseId}/`, { method: 'DELETE' });
+  },
+
   uploadMaterial: async (courseId: string, formData: FormData) => {
     console.log('Uploading material to course:', courseId);
     if (!courseId || isNaN(Number(courseId))) {

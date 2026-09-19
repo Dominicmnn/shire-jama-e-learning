@@ -1,6 +1,7 @@
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.http import FileResponse, StreamingHttpResponse
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
@@ -326,7 +327,11 @@ class MaterialStreamView(APIView):
             return Response({"detail": "The stored file is empty or missing. Ask the instructor to upload it again."}, status=status.HTTP_404_NOT_FOUND)
 
         content_type = mimetypes.guess_type(material.file.name)[0] or ('video/mp4' if material.material_type == LearningMaterial.MaterialType.VIDEO else 'application/pdf')
-        response = stream_video_file(request, file_path, content_type=content_type)
+        if material.material_type == LearningMaterial.MaterialType.PDF:
+            response = FileResponse(open(file_path, 'rb'), content_type='application/pdf')
+            response['Content-Length'] = str(Path(file_path).stat().st_size)
+        else:
+            response = stream_video_file(request, file_path, content_type=content_type)
         if response is None:
             return Response({"detail": "Physical file missing on server disk."}, status=status.HTTP_404_NOT_FOUND)
 
