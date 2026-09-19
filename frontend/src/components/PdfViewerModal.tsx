@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LearningMaterial } from '../types';
+import { getMaterialStreamUrl } from '../services/api';
 import { X, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -41,12 +42,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
       try {
         const storedTokens = window.localStorage.getItem('shire-jama-auth-tokens');
         const accessToken = storedTokens ? JSON.parse(storedTokens).access : null;
-        const materialUrl = new URL(material.fileUrl, window.location.origin);
-        const isLocalBackend = ['localhost', '127.0.0.1'].includes(materialUrl.hostname)
-          && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-        const requestUrl = isLocalBackend
-          ? `${window.location.origin}${materialUrl.pathname}${materialUrl.search}`
-          : material.fileUrl;
+        const requestUrl = getMaterialStreamUrl(String(material.id));
         const response = await fetch(requestUrl, {
           cache: 'no-store',
           headers: accessToken && !requestUrl.startsWith('blob:')

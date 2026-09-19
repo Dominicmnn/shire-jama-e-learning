@@ -15,6 +15,8 @@ const apiBaseUrl = configuredApiUrl.replace(/\/$/, '').endsWith('/api')
   ? configuredApiUrl.replace(/\/$/, '')
   : `${configuredApiUrl.replace(/\/$/, '')}/api`;
 
+export const getMaterialStreamUrl = (materialId: string) => `${apiBaseUrl}/materials/${materialId}/stream/`;
+
 const getAccessToken = () => {
   if (typeof window === 'undefined') return '';
   try { return JSON.parse(window.localStorage.getItem(tokenStorageKey) || '{}').access || ''; } catch { return ''; }
