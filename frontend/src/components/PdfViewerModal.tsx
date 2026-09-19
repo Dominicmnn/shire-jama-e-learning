@@ -36,6 +36,9 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
   useEffect(() => {
     if (!material) return undefined;
 
+    const controller = new AbortController();
+    let active = true;
+
     const loadDocument = async () => {
       setLoading(true);
       setLoadError('');
@@ -43,6 +46,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
         const requestUrl = getMaterialStreamUrl(String(material.id));
         const response = await authenticatedFetch(requestUrl, {
           cache: 'no-store',
+          signal: controller.signal,
         });
         if (!response.ok) {
           if (response.status === 401) throw new Error('Your session has expired. Please sign in again.');
@@ -59,6 +63,10 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
           throw new Error('The PDF file is empty on server storage. Ask the instructor to upload it again.');
         }
         const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise;
+        if (!active) {
+          await pdf.destroy();
+          return;
+        }
         pdfRef.current = pdf;
         setPageCount(pdf.numPages);
         setPageNumber(1);
@@ -70,6 +78,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
         canvas.height = firstViewport.height;
         await firstPage.render({ canvasContext: canvas.getContext('2d')!, viewport: firstViewport }).promise;
       } catch (error) {
+        if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
         setLoadError(error instanceof TypeError && error.message === 'Failed to fetch'
           ? 'The document server could not be reached. Start the backend locally or configure VITE_API_URL for the deployed frontend.'
           : error instanceof Error ? error.message : 'The document could not be opened.');
@@ -79,6 +88,12 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
     };
 
     loadDocument();
+    return () => {
+      active = false;
+      controller.abort();
+      pdfRef.current?.destroy();
+      pdfRef.current = null;
+    };
   }, [material]);
 
   if (!material) return null;

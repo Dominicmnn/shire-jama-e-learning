@@ -6,9 +6,7 @@ const tokenStorageKey = 'shire-jama-auth-tokens';
 const progressStorageKey = 'shire-jama-chapter-progress';
 const usersStorageKey = 'shire-jama-users';
 const createdQuizzesStorageKey = 'shire-jama-created-quizzes';
-const defaultApiUrl = typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname)
-  ? `${window.location.origin}/api`
-  : 'http://127.0.0.1:8000/api';
+const defaultApiUrl = `${window.location.origin}/api`;
 const viteEnvironment = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env;
 const configuredApiUrl = viteEnvironment?.VITE_API_URL || defaultApiUrl;
 const apiBaseUrl = configuredApiUrl.replace(/\/$/, '').endsWith('/api')
