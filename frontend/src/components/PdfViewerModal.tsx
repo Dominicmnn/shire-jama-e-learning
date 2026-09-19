@@ -41,12 +41,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
       try {
         const storedTokens = window.localStorage.getItem('shire-jama-auth-tokens');
         const accessToken = storedTokens ? JSON.parse(storedTokens).access : null;
-        const materialUrl = new URL(material.fileUrl, window.location.origin);
-        const isLocalBackend = ['localhost', '127.0.0.1'].includes(materialUrl.hostname)
-          && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-        const requestUrl = isLocalBackend
-          ? `${window.location.origin}${materialUrl.pathname}${materialUrl.search}`
-          : material.fileUrl;
+        const requestUrl = material.fileUrl;
         const response = await fetch(requestUrl, {
           headers: accessToken && !requestUrl.startsWith('blob:')
             ? { Authorization: `Bearer ${accessToken}` }
@@ -63,6 +58,9 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
           throw new Error('The server did not return a PDF file. Ask the instructor to upload a PDF document.');
         }
         const fileBuffer = await response.arrayBuffer();
+        if (fileBuffer.byteLength === 0) {
+          throw new Error('The PDF file is empty on server storage. Ask the instructor to upload it again.');
+        }
         const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise;
         pdfRef.current = pdf;
         setPageCount(pdf.numPages);

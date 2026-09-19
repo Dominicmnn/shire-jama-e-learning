@@ -244,6 +244,12 @@ class MaterialUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if file.size == 0:
+            return Response(
+                {"detail": "The uploaded file is empty. Choose a PDF with content and try again."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if material_type not in [LearningMaterial.MaterialType.PDF, LearningMaterial.MaterialType.VIDEO]:
             return Response(
                 {"detail": "Type must be either PDF or VIDEO."},
@@ -315,6 +321,9 @@ class MaterialStreamView(APIView):
             file_path = material.file.path
         except NotImplementedError:
             return Response({"detail": "Direct filesystem streaming not supported on this storage backend."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not Path(file_path).is_file() or Path(file_path).stat().st_size == 0:
+            return Response({"detail": "The stored file is empty or missing. Ask the instructor to upload it again."}, status=status.HTTP_404_NOT_FOUND)
 
         content_type = mimetypes.guess_type(material.file.name)[0] or ('video/mp4' if material.material_type == LearningMaterial.MaterialType.VIDEO else 'application/pdf')
         response = stream_video_file(request, file_path, content_type=content_type)
