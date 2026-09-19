@@ -75,7 +75,10 @@ class Command(BaseCommand):
             }
         )
         student.set_password('Student2024!')
+        student.role = User.Role.STUDENT
+        student.student_id = student.student_id or 'STD-2024-001'
         student.academic_level = student.academic_level or User.AcademicLevel.CLASS_1
+        student.is_active = True
         student.save()
         User.objects.filter(role=User.Role.STUDENT, academic_level__isnull=True).update(
             academic_level=User.AcademicLevel.CLASS_1
