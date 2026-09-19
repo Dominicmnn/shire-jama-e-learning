@@ -41,7 +41,12 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
       try {
         const storedTokens = window.localStorage.getItem('shire-jama-auth-tokens');
         const accessToken = storedTokens ? JSON.parse(storedTokens).access : null;
-        const requestUrl = material.fileUrl;
+        const materialUrl = new URL(material.fileUrl, window.location.origin);
+        const isLocalBackend = ['localhost', '127.0.0.1'].includes(materialUrl.hostname)
+          && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+        const requestUrl = isLocalBackend
+          ? `${window.location.origin}${materialUrl.pathname}${materialUrl.search}`
+          : material.fileUrl;
         const response = await fetch(requestUrl, {
           headers: accessToken && !requestUrl.startsWith('blob:')
             ? { Authorization: `Bearer ${accessToken}` }
