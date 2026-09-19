@@ -150,29 +150,18 @@ export const api = {
   },
 
   adminProvisionStudent: async (payload: { fullName: string; email: string; username: string; password: string; studentId?: string; academicLevel: AcademicLevel }) => {
-    ensureTokens();
-    const emailTrimmed = payload.email.trim().toLowerCase();
-    const storedUsers = getStoredUsers();
-    const existing = storedUsers.find((user) => user.email.toLowerCase() === emailTrimmed);
-    if (existing) {
-      return Promise.reject(new Error('User already exists'));
-    }
-
-    const idSuffix = Math.floor(100 + Math.random() * 900);
-    const newStudent: User = {
-      id: `u-std-${Date.now()}`,
-      username: payload.username.trim() || emailTrimmed.split('@')[0],
-      fullName: payload.fullName.trim(),
-      email: emailTrimmed,
-      role: 'STUDENT',
-      isActive: true,
-      dateJoined: new Date().toISOString().split('T')[0],
-      studentId: payload.studentId || `STD-${new Date().getFullYear()}-${idSuffix}`,
-      academicLevel: payload.academicLevel,
-    };
-
-    storeUsers([...storedUsers, newStudent]);
-    return Promise.resolve(newStudent);
+    const student = await apiRequest('/admin/students/', {
+      method: 'POST',
+      body: JSON.stringify({
+        ...payload,
+        fullName: payload.fullName.trim(),
+        email: payload.email.trim().toLowerCase(),
+        username: payload.username.trim(),
+        password: payload.password,
+        studentId: payload.studentId?.trim() || undefined,
+      }),
+    });
+    return normalizeUser(student);
   },
 
   createCourse: async (title: string, description: string, academicLevels: AcademicLevel[], instructor: User) => {

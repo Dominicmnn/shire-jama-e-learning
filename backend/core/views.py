@@ -1,6 +1,7 @@
 from rest_framework import status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -35,6 +36,19 @@ from .streaming import stream_video_file
 User = get_user_model()
 
 
+class InstitutionalTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        identifier = str(self.initial_data.get('username', '')).strip()
+        matched_user = User.objects.filter(
+            Q(username__iexact=identifier) |
+            Q(email__iexact=identifier) |
+            Q(student_id__iexact=identifier)
+        ).first()
+        if matched_user:
+            attrs['username'] = matched_user.username
+        return super().validate(attrs)
+
+
 # ----------------------------------------------------------------------
 # AUTHENTICATION & PROFILE VIEWS
 # ----------------------------------------------------------------------
@@ -43,11 +57,18 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Login endpoint. Returns JWT tokens along with institutional role and profile details.
     """
+    serializer_class = InstitutionalTokenObtainPairSerializer
+
     def post(self, request, *args, **kwargs):
+        identifier = str(request.data.get('username', '')).strip()
+        matched_user = User.objects.filter(
+            Q(username__iexact=identifier) |
+            Q(email__iexact=identifier) |
+            Q(student_id__iexact=identifier)
+        ).first()
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
-            username = request.data.get('username')
-            user = User.objects.filter(username=username).first()
+            user = matched_user or User.objects.filter(username=identifier).first()
             if user:
                 if not user.is_active:
                     return Response(

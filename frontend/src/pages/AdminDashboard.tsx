@@ -32,6 +32,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [studentPassword, setStudentPassword] = useState('');
   const [studentId, setStudentId] = useState('');
   const [studentLevel, setStudentLevel] = useState<AcademicLevel>('CLASS_1');
+  const [studentError, setStudentError] = useState('');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [instCode, setInstCode] = useState('');
@@ -91,13 +92,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleEnrollStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setStudentError('');
     const payload = { fullName: studentFullName, email: studentEmail, username: studentUsername, password: studentPassword, studentId, academicLevel: studentLevel };
     try {
       const student = await api.adminProvisionStudent(payload);
       onAddInstructor(student);
-    } catch {
-      const student: User = { id: `u-std-${Date.now()}`, username: studentUsername, fullName: studentFullName, email: studentEmail, role: 'STUDENT', isActive: true, dateJoined: new Date().toISOString().split('T')[0], studentId: studentId || `STD-${Date.now()}`, academicLevel: studentLevel };
-      onAddInstructor(student);
+    } catch (error) {
+      setStudentError(error instanceof Error ? error.message : 'Student enrollment failed.');
+      setLoading(false);
+      return;
     }
     setLoading(false);
     setShowStudentModal(false);
@@ -203,6 +206,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <input required type="email" value={studentEmail} onChange={(e) => setStudentEmail(e.target.value)} placeholder="Student email" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
               <input required value={studentUsername} onChange={(e) => setStudentUsername(e.target.value)} placeholder="Login username" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
               <input required minLength={6} value={studentPassword} onChange={(e) => setStudentPassword(e.target.value)} placeholder="Temporary password" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
+              {studentError && <p className="text-sm font-semibold text-rose-700">{studentError}</p>}
               <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="Student ID (optional)" className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm" />
               <select value={studentLevel} onChange={(e) => setStudentLevel(e.target.value as AcademicLevel)} className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm">{ACADEMIC_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}</select>
               <p className="text-xs text-slate-500">Give the generated student ID or username and password to the enrolled student.</p>
