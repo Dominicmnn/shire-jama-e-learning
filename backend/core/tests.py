@@ -127,6 +127,26 @@ class ShireJamaLmsTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response['Content-Disposition'].startswith('inline;'))
 
+    def test_student_can_stream_uploaded_pdf(self):
+        course = Course.objects.create(
+            title='PDF Course',
+            description='Test PDF course',
+            instructor=self.instructor,
+            academic_levels=['CLASS_1']
+        )
+        material = LearningMaterial.objects.create(
+            course=course,
+            title='Lesson PDF',
+            material_type=LearningMaterial.MaterialType.PDF,
+            file=SimpleUploadedFile('lesson.pdf', b'%PDF-1.4 test')
+        )
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(f'/api/materials/{material.id}/stream/', HTTP_HOST='localhost')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
     def test_pdf_material_upload_rejects_word_documents(self):
         course = Course.objects.create(
             title='Upload Course',

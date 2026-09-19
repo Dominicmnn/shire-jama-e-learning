@@ -27,12 +27,20 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
             ? { Authorization: `Bearer ${accessToken}` }
             : undefined,
         });
-        if (!response.ok) throw new Error('The document could not be loaded.');
+        if (!response.ok) {
+          if (response.status === 401) throw new Error('Your session has expired. Please sign in again.');
+          if (response.status === 403) throw new Error('You do not have access to this document.');
+          if (response.status === 404) throw new Error('The PDF file is missing from server storage. Ask the administrator to restore the uploaded file.');
+          throw new Error(`The document server returned HTTP ${response.status}.`);
+        }
         const file = await response.blob();
+        if (file.type && file.type !== 'application/pdf' && !file.type.endsWith('/pdf')) {
+          throw new Error('The server did not return a PDF file. Ask the instructor to upload a PDF document.');
+        }
         objectUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
         setViewerUrl(objectUrl);
-      } catch {
-        setLoadError('This document could not be opened in the system. Please ask the instructor to upload it again as a PDF.');
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : 'The document could not be opened.');
       } finally {
         setLoading(false);
       }
