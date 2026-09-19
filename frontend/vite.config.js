@@ -8,8 +8,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       proxy: {
-        '/api': 'http://localhost:8000',
-        '/media': 'http://localhost:8000',
+        '/api': 'http://127.0.0.1:8000',
+        '/media': 'http://127.0.0.1:8000',
       },
     },
     define: {
