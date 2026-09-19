@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { LearningMaterial } from '../types';
-import { X, FileText } from 'lucide-react';
+import { X, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface PdfViewerModalProps {
   material: LearningMaterial | null;
@@ -8,23 +12,28 @@ interface PdfViewerModalProps {
 }
 
 export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClose }) => {
-  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
-  const viewerUrlRef = useRef<string | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageCount, setPageCount] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const pdfRef = useRef<any>(null);
 
-  useEffect(() => () => {
-    if (viewerUrlRef.current) URL.revokeObjectURL(viewerUrlRef.current);
-  }, []);
+  useEffect(() => {
+    const renderPage = async () => {
+      if (!pdfRef.current || !canvasRef.current) return;
+      const page = await pdfRef.current.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1.35 });
+      const canvas = canvasRef.current;
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise;
+    };
+    renderPage().catch((error) => setLoadError(error instanceof Error ? error.message : 'The page could not be rendered.'));
+  }, [pageNumber]);
 
   useEffect(() => {
     if (!material) return undefined;
-
-    if (viewerUrlRef.current) {
-      URL.revokeObjectURL(viewerUrlRef.current);
-      viewerUrlRef.current = null;
-    }
-    setViewerUrl(null);
 
     const loadDocument = async () => {
       setLoading(true);
@@ -54,9 +63,17 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
           throw new Error('The server did not return a PDF file. Ask the instructor to upload a PDF document.');
         }
         const fileBuffer = await response.arrayBuffer();
-        const nextViewerUrl = URL.createObjectURL(new Blob([fileBuffer], { type: 'application/pdf' }));
-        viewerUrlRef.current = nextViewerUrl;
-        setViewerUrl(nextViewerUrl);
+        const pdf = await pdfjsLib.getDocument({ data: fileBuffer }).promise;
+        pdfRef.current = pdf;
+        setPageCount(pdf.numPages);
+        setPageNumber(1);
+        const firstPage = await pdf.getPage(1);
+        const firstViewport = firstPage.getViewport({ scale: 1.35 });
+        const canvas = canvasRef.current;
+        if (!canvas) throw new Error('The PDF viewer could not be initialized.');
+        canvas.width = firstViewport.width;
+        canvas.height = firstViewport.height;
+        await firstPage.render({ canvasContext: canvas.getContext('2d')!, viewport: firstViewport }).promise;
       } catch (error) {
         setLoadError(error instanceof TypeError && error.message === 'Failed to fetch'
           ? 'The document server could not be reached. Start the backend locally or configure VITE_API_URL for the deployed frontend.'
@@ -102,13 +119,14 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
         <div className="flex-1 bg-slate-100 p-2 relative">
           {loading && <div className="h-full flex items-center justify-center text-sm text-slate-600">Opening document...</div>}
           {!loading && loadError && <div className="h-full flex items-center justify-center p-6 text-center text-sm font-semibold text-rose-700">{loadError}</div>}
-          {!loading && !loadError && viewerUrl && (
-            <iframe
-              src={`${viewerUrl}#toolbar=0&navpanes=0&download=0`}
-              className="w-full h-full rounded border border-slate-200 shadow-inner bg-white"
-              title={material.title}
-            />
-          )}
+          {!loading && !loadError && <div className="flex h-full flex-col items-center gap-3 overflow-auto">
+            <canvas ref={canvasRef} className="max-w-full border border-slate-200 bg-white shadow" />
+            {pageCount > 1 && <div className="sticky bottom-2 flex items-center gap-3 rounded-lg bg-slate-900 px-3 py-2 text-xs text-white shadow">
+              <button type="button" disabled={pageNumber <= 1} onClick={() => setPageNumber((page) => Math.max(1, page - 1))} className="rounded p-1 hover:bg-slate-700 disabled:opacity-40" aria-label="Previous page"><ChevronLeft className="h-4 w-4" /></button>
+              <span>Page {pageNumber} of {pageCount}</span>
+              <button type="button" disabled={pageNumber >= pageCount} onClick={() => setPageNumber((page) => Math.min(pageCount, page + 1))} className="rounded p-1 hover:bg-slate-700 disabled:opacity-40" aria-label="Next page"><ChevronRight className="h-4 w-4" /></button>
+            </div>}
+          </div>}
         </div>
 
         {/* Footer Notes */}
