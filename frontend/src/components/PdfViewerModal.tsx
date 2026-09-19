@@ -48,6 +48,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
           ? `${window.location.origin}${materialUrl.pathname}${materialUrl.search}`
           : material.fileUrl;
         const response = await fetch(requestUrl, {
+          cache: 'no-store',
           headers: accessToken && !requestUrl.startsWith('blob:')
             ? { Authorization: `Bearer ${accessToken}` }
             : undefined,

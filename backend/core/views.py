@@ -335,6 +335,7 @@ class MaterialStreamView(APIView):
         )
         response['Content-Disposition'] = f"{disposition}; filename=\"{material.file.name.split('/')[-1]}\""
         response['X-Content-Type-Options'] = 'nosniff'
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         return response
 
 
