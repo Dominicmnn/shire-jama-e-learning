@@ -9,7 +9,8 @@ const createdQuizzesStorageKey = 'shire-jama-created-quizzes';
 const defaultApiUrl = typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname)
   ? `${window.location.origin}/api`
   : 'http://localhost:8000/api';
-const configuredApiUrl = (import.meta.env.VITE_API_URL || defaultApiUrl) as string;
+const viteEnvironment = (import.meta as ImportMeta & { env?: { VITE_API_URL?: string } }).env;
+const configuredApiUrl = viteEnvironment?.VITE_API_URL || defaultApiUrl;
 const apiBaseUrl = configuredApiUrl.replace(/\/$/, '').endsWith('/api')
   ? configuredApiUrl.replace(/\/$/, '')
   : `${configuredApiUrl.replace(/\/$/, '')}/api`;
