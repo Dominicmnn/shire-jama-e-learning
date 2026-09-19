@@ -40,7 +40,9 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({ material, onClos
         objectUrl = URL.createObjectURL(new Blob([file], { type: 'application/pdf' }));
         setViewerUrl(objectUrl);
       } catch (error) {
-        setLoadError(error instanceof Error ? error.message : 'The document could not be opened.');
+        setLoadError(error instanceof TypeError && error.message === 'Failed to fetch'
+          ? 'The document server could not be reached. Start the backend locally or configure VITE_API_URL for the deployed frontend.'
+          : error instanceof Error ? error.message : 'The document could not be opened.');
       } finally {
         setLoading(false);
       }

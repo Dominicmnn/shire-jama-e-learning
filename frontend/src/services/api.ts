@@ -6,8 +6,10 @@ const tokenStorageKey = 'shire-jama-auth-tokens';
 const progressStorageKey = 'shire-jama-chapter-progress';
 const usersStorageKey = 'shire-jama-users';
 const createdQuizzesStorageKey = 'shire-jama-created-quizzes';
-// @ts-ignore
-const configuredApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api') as string;
+const defaultApiUrl = typeof window !== 'undefined' && !['localhost', '127.0.0.1'].includes(window.location.hostname)
+  ? `${window.location.origin}/api`
+  : 'http://localhost:8000/api';
+const configuredApiUrl = (import.meta.env.VITE_API_URL || defaultApiUrl) as string;
 const apiBaseUrl = configuredApiUrl.replace(/\/$/, '').endsWith('/api')
   ? configuredApiUrl.replace(/\/$/, '')
   : `${configuredApiUrl.replace(/\/$/, '')}/api`;
