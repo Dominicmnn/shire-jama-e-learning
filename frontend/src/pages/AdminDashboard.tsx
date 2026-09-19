@@ -67,19 +67,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         temporaryPassword: tempPass.trim(),
       });
       onAddInstructor(instructor);
-    } catch {
-      // Local fallback
-      const localInstructor: User = {
-        id: `u-inst-${Date.now()}`,
-        username: email.split('@')[0],
-        fullName: fullName.trim(),
-        email: email.trim(),
-        role: 'INSTRUCTOR',
-        isActive: true,
-        dateJoined: new Date().toISOString().split('T')[0],
-        instructorCode: instCode.trim() || `INST-${Math.floor(100 + Math.random() * 900)}`,
-      };
-      onAddInstructor(localInstructor);
+    } catch (error) {
+      setStudentError(error instanceof Error ? error.message : 'Instructor provisioning failed.');
+      setLoading(false);
+      return;
     }
 
     setLoading(false);
@@ -123,9 +114,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!selectedUserForReset || !newPassword.trim()) return;
 
     try {
-      await api.adminResetPassword(selectedUserForReset.id, newPassword.trim());
-    } catch {
-      // Local fallback
+      const savedUser = await api.adminResetPassword(selectedUserForReset, newPassword.trim());
+      if (savedUser && typeof savedUser === 'object' && 'id' in savedUser) onUpdateUser(savedUser as User);
+    } catch (error) {
+      setResetSuccess(error instanceof Error ? error.message : 'Password update failed.');
+      return;
     }
 
     onResetPassword(selectedUserForReset.id, newPassword.trim());

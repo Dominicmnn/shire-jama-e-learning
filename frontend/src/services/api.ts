@@ -251,35 +251,60 @@ export const api = {
   },
 
   adminProvisionInstructor: async (payload: { fullName: string; email: string; instructorCode?: string; temporaryPassword: string }) => {
-    ensureTokens();
-    const newInstructor: User = {
-      id: `u-inst-${Date.now()}`,
-      username: payload.email.split('@')[0],
-      fullName: payload.fullName.trim(),
-      email: payload.email.trim().toLowerCase(),
-      role: 'INSTRUCTOR',
-      isActive: true,
-      dateJoined: new Date().toISOString().split('T')[0],
-      instructorCode: payload.instructorCode || `INST-${Math.floor(100 + Math.random() * 900)}`,
-    };
-    return Promise.resolve(newInstructor);
+    const response = await apiRequest('/admin/instructors/', {
+      method: 'POST',
+      body: JSON.stringify({
+        fullName: payload.fullName.trim(),
+        email: payload.email.trim().toLowerCase(),
+        instructor_code: payload.instructorCode?.trim() || undefined,
+        temporaryPassword: payload.temporaryPassword,
+      }),
+    });
+    return normalizeUser({ ...response.instructor, role: 'INSTRUCTOR', isActive: true });
   },
 
   adminToggleStatus: async (userId: string) => {
-    ensureTokens();
-    return Promise.resolve({ userId, isActive: true });
+    return apiRequest(`/admin/instructors/${userId}/toggle-status/`, { method: 'POST' });
   },
 
-  adminResetPassword: async (userId: string, newPassword: string) => {
-    ensureTokens();
-    return Promise.resolve({ userId, newPassword });
+  adminResetPassword: async (user: User, newPassword: string) => {
+    if (!/^\d+$/.test(String(user.id))) {
+      if (user.role === 'STUDENT') {
+        return api.adminProvisionStudent({
+          fullName: user.fullName,
+          email: user.email,
+          username: user.username,
+          password: newPassword,
+          studentId: user.studentId,
+          academicLevel: user.academicLevel || 'CLASS_1',
+        });
+      }
+      return api.adminProvisionInstructor({
+        fullName: user.fullName,
+        email: user.email,
+        instructorCode: user.instructorCode,
+        temporaryPassword: newPassword,
+      });
+    }
+    return apiRequest(`/admin/users/${user.id}/reset-password/`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
   },
 
   adminUpdateUser: async (userId: string, user: User): Promise<User> => {
-    ensureTokens();
-    const updatedUser = { ...user, id: userId };
-    storeUsers(getStoredUsers().map((storedUser) => storedUser.id === userId ? updatedUser : storedUser));
-    return Promise.resolve(updatedUser);
+    const updatedUser = await apiRequest(`/admin/users/${userId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        fullName: user.fullName,
+        username: user.username,
+        email: user.email,
+        studentId: user.studentId,
+        academicLevel: user.academicLevel,
+        instructorCode: user.instructorCode,
+      }),
+    });
+    return normalizeUser(updatedUser);
   },
 };
 
