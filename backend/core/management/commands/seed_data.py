@@ -80,7 +80,26 @@ class Command(BaseCommand):
         User.objects.filter(role=User.Role.STUDENT, academic_level__isnull=True).update(
             academic_level=User.AcademicLevel.CLASS_1
         )
-        self.stdout.write(self.style.SUCCESS("✓ Student ready (faiza / pass: Student2024!)"))
+
+        student2, _ = User.objects.get_or_create(
+            username='khalid',
+            defaults={
+                'email': 'khalid.w@example.com',
+                'first_name': 'Khalid',
+                'last_name': 'Warsame',
+                'role': User.Role.STUDENT,
+                'student_id': 'STD-2024-094',
+                'academic_level': User.AcademicLevel.FORM_1,
+                'is_active': True,
+            }
+        )
+        student2.set_password('Student2024!')
+        student2.role = User.Role.STUDENT
+        student2.student_id = student2.student_id or 'STD-2024-094'
+        student2.academic_level = student2.academic_level or User.AcademicLevel.FORM_1
+        student2.is_active = True
+        student2.save()
+        self.stdout.write(self.style.SUCCESS("✓ Students ready (faiza, khalid / pass: Student2024!)"))
 
         # 5. Course: Somali Literacy & Shire Jama Script
         course1, _ = Course.objects.get_or_create(
