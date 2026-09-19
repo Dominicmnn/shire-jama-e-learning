@@ -342,7 +342,10 @@ class CourseDetailSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         quizzes = obj.quizzes.all()
         if request and request.user.is_authenticated and request.user.is_student():
-            quizzes = quizzes.filter(course__academic_levels__contains=[request.user.academic_level])
+            quizzes = [
+                quiz for quiz in quizzes
+                if request.user.academic_level in quiz.course.level_values
+            ]
         return QuizSerializer(quizzes, many=True, context=self.context).data
 
 

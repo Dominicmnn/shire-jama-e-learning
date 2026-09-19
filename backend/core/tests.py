@@ -90,6 +90,22 @@ class ShireJamaLmsTests(TestCase):
         response = self.client.get(f'/api/materials/{material.id}/stream/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_student_course_detail_includes_quizzes(self):
+        course = Course.objects.create(
+            title='Course With Quiz',
+            description='Test course detail',
+            instructor=self.instructor,
+            academic_levels=['CLASS_1']
+        )
+        chapter = Chapter.objects.create(course=course, title='Chapter 1')
+        quiz = Quiz.objects.create(course=course, chapter=chapter, title='Student Quiz')
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(f'/api/courses/{course.id}/', HTTP_HOST='localhost')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['chapters'][0]['quizzes'][0]['id'], quiz.id)
+
     def test_student_material_stream_is_inline_even_when_download_is_allowed(self):
         course = Course.objects.create(
             title='Student Course',
