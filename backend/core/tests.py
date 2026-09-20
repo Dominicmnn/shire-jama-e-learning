@@ -146,6 +146,7 @@ class ShireJamaLmsTests(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertGreater(len(b''.join(response.streaming_content)), 0)
 
     def test_pdf_material_upload_rejects_word_documents(self):
         course = Course.objects.create(
